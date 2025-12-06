@@ -1,0 +1,370 @@
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace CarSlineAPI.Models.Entities
+{
+    // ============================================
+    // ENTIDADES DE BASE DE DATOS
+    // ============================================
+
+    [Table("roles")]
+    public class Rol
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(50)]
+        public string NombreRol { get; set; } = string.Empty;
+
+        [MaxLength(255)]
+        public string? Descripcion { get; set; }
+
+        public DateTime FechaCreacion { get; set; } = DateTime.Now;
+
+        // Relación con usuarios
+        public virtual ICollection<Usuario> Usuarios { get; set; } = new List<Usuario>();
+    }
+
+
+    [Table("usuarios")]
+    public class Usuario
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(150)]
+        public string NombreCompleto { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(50)]
+        public string NombreUsuario { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(255)]
+        public string Password { get; set; } = string.Empty;
+
+        [Required]
+        public int RolId { get; set; }
+
+        public DateTime FechaCreacion { get; set; } = DateTime.Now;
+
+        public DateTime? UltimoAcceso { get; set; }
+
+        public bool Activo { get; set; } = true;
+
+        public int? CreadoPorId { get; set; }
+
+        // Navegación
+        [ForeignKey("RolId")]
+        public virtual Rol? Rol { get; set; }
+
+        [ForeignKey("CreadoPorId")]
+        public virtual Usuario? CreadoPor { get; set; }
+    }
+
+    [Table("Clientes")]
+    public class Cliente
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required, MaxLength(250)]
+        public string NombreCompleto { get; set; } = string.Empty;
+
+        [Required, MaxLength(20)]
+        public string RFC { get; set; } = string.Empty;
+
+        [Required, MaxLength(50)]
+        public string TelefonoMovil { get; set; } = string.Empty;
+
+        [MaxLength(50)]
+        public string? TelefonoCasa { get; set; }
+
+        [MaxLength(150)]
+        public string? CorreoElectronico { get; set; }
+
+        [MaxLength(150)]
+        public string? Colonia { get; set; }
+
+        [MaxLength(150)]
+        public string? Calle { get; set; }
+
+        [MaxLength(50)]
+        public string? NumeroExterior { get; set; }
+
+        [MaxLength(150)]
+        public string? Municipio { get; set; }
+
+        [MaxLength(150)]
+        public string? Estado { get; set; }
+
+        [MaxLength(100)]
+        public string? Pais { get; set; }
+
+        [MaxLength(20)]
+        public string? CodigoPostal { get; set; }
+
+        public bool Activo { get; set; } = true;
+    }
+
+    [Table("Vehiculos")]
+    public class Vehiculo
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int ClienteId { get; set; }
+
+        [Required, MaxLength(50)]
+        public string VIN { get; set; } = string.Empty;
+
+        [MaxLength(100)]
+        public string? Marca { get; set; }
+        [MaxLength(100)]
+        public string? Version { get; set; }
+
+        [MaxLength(100)]
+        public string? Modelo { get; set; }
+
+        public int? Anio { get; set; }
+
+        [MaxLength(50)]
+        public string? Color { get; set; }
+
+        [MaxLength(20)]
+        public string? Placas { get; set; }
+
+        public int KilometrajeInicial { get; set; }
+
+        public bool Activo { get; set; } = true;
+
+        // navegación
+        [ForeignKey("ClienteId")]
+        public Cliente? Cliente { get; set; }
+    }
+
+
+    [Table("TiposServicio")]
+    public class TipoServicio
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required, MaxLength(150)]
+        public string NombreServicio { get; set; } = string.Empty;
+
+        [MaxLength(500)]
+        public string? Descripcion { get; set; }
+
+        public decimal PrecioBase { get; set; }
+
+        public bool Activo { get; set; } = true;
+    }
+
+    [Table("ServiciosExtra")]
+    public class ServicioExtra
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required, MaxLength(150)]
+        public string NombreServicio { get; set; } = string.Empty;
+
+        [MaxLength(500)]
+        public string? Descripcion { get; set; }
+
+        public decimal Precio { get; set; }
+
+        [MaxLength(100)]
+        public string? Categoria { get; set; }
+
+        public bool Activo { get; set; } = true;
+    }
+
+    [Table("ServiciosFrecuentes")]
+    public class ServicioFrecuente
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required, MaxLength(150)]
+        public string NombreServicio { get; set; } = string.Empty;
+
+        [MaxLength(500)]
+        public string? Descripcion { get; set; }
+
+        public decimal Precio { get; set; }
+
+        [MaxLength(100)]
+        public string? Categoria { get; set; }
+
+        public bool Activo { get; set; } = true;
+    }
+
+    [Table("Ordenes")]
+    public class Orden
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required, MaxLength(50)]
+        public string NumeroOrden { get; set; } = string.Empty;
+
+        public int TipoOrdenId { get; set; } // 1=SRV, etc.
+
+        public int ClienteId { get; set; }
+
+        public int VehiculoId { get; set; }
+
+        public int AsesorId { get; set; }
+
+        public int? TipoServicioId { get; set; }
+
+        public int KilometrajeActual { get; set; }
+
+        public int EstadoOrdenId { get; set; } = 1;
+
+        public DateTime FechaHoraPromesaEntrega { get; set; }
+
+        public DateTime FechaCreacion { get; set; } = DateTime.Now;
+
+        public DateTime? FechaInicioProceso { get; set; }
+
+        public DateTime? FechaFinalizacion { get; set; }
+
+        public DateTime? FechaEntrega { get; set; }
+
+        public string? ObservacionesAsesor { get; set; }
+
+        public decimal CostoTotal { get; set; }
+
+        public bool Activo { get; set; } = true;
+
+        // relaciones
+        public virtual ICollection<OrdenServicioExtra> ServiciosExtra { get; set; } = new List<OrdenServicioExtra>();
+        public virtual ICollection<OrdenServicioExtra> ServiciosFrecuentes { get; set; } = new List<OrdenServicioExtra>();
+        public virtual Cliente Cliente { get; set; }
+        public virtual Vehiculo Vehiculo { get; set; }
+        public virtual TipoServicio TipoServicio { get; set; }
+        //public virtual Usuario Tecnico { get; set; }
+        public virtual Usuario Asesor { get; set; }
+    }
+
+
+    [Table("OrdenesGenerales")]
+    public class OrdenGeneral
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required, MaxLength(50)]
+        public string NumeroOrden { get; set; } = string.Empty;
+        public int TipoOrdenId { get; set; } // 1=SRV, etc.
+        public int ClienteId { get; set; }
+        public int VehiculoId { get; set; }
+        public int AsesorId { get; set; }
+        public int? TipoServicioId { get; set; }
+        public int KilometrajeActual { get; set; }
+        public DateTime FechaCreacion { get; set; } = DateTime.Now;
+        public DateTime FechaHoraPromesaEntrega { get; set; }
+        public DateTime? FechaInicioProceso { get; set; }
+        public DateTime? FechaFinalizacion { get; set; }
+        public DateTime? FechaEntrega { get; set; }
+        public string? ObservacionesAsesor { get; set; }
+        public string? ObservacionesJefe { get; set; }
+        public decimal CostoTotal { get; set; }
+        public decimal TiempoTotalHoras { get; set; }
+        public int EstadoOrdenId { get; set; } = 1;
+        public bool Activo { get; set; } = true;
+
+        // relaciones
+        public virtual ICollection<OrdenServicioExtra> ServiciosExtra { get; set; } = new List<OrdenServicioExtra>();
+        public virtual ICollection<OrdenServicioExtra> ServiciosFrecuentes { get; set; } = new List<OrdenServicioExtra>();
+        public virtual Cliente Cliente { get; set; }
+        public virtual Vehiculo Vehiculo { get; set; }
+        public virtual Usuario Asesor { get; set; }
+        public virtual TipoServicio TipoServicio { get; set; }
+        //public virtual Usuario Tecnico { get; set; }
+
+    }
+
+    [Table("OrdenServiciosExtra")]
+    public class OrdenServicioExtra
+    {
+        [Key]
+        public int Id { get; set; }
+
+        public int OrdenId { get; set; }
+
+        public int ServicioExtraId { get; set; }
+
+        public decimal PrecioAplicado { get; set; }
+
+        // navegación
+        [ForeignKey("OrdenId")]
+        public Orden? Orden { get; set; }
+
+        [ForeignKey("ServicioExtraId")]
+        public ServicioExtra? ServicioExtra { get; set; }
+    }
+
+    [Table("HistorialServicios")]
+    public class HistorialServicio
+    {
+        [Key]
+        public int Id { get; set; }
+
+        public int VehiculoId { get; set; }
+
+        public int OrdenId { get; set; }
+
+        public int TipoServicioId { get; set; }
+
+        public int KilometrajeRegistrado { get; set; }
+
+        public DateTime FechaServicio { get; set; }
+
+        public int? ProximoServicioKm { get; set; }
+
+        public DateTime? ProximoServicioFecha { get; set; }
+
+        public decimal CostoTotal { get; set; }
+    }
+
+    [Table("refacciones")]
+    public class Refaccion
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(50)]
+        public string NumeroParte { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(100)]
+        public string TipoRefaccion { get; set; } = string.Empty;
+
+        [MaxLength(50)]
+        public string? MarcaVehiculo { get; set; }
+
+        [MaxLength(50)]
+        public string? Modelo { get; set; }
+
+        public int? Anio { get; set; }
+
+        [Required]
+        public int Cantidad { get; set; }
+
+        public DateTime FechaRegistro { get; set; } = DateTime.Now;
+
+        public DateTime FechaUltimaModificacion { get; set; } = DateTime.Now;
+
+        public bool Activo { get; set; } = true;
+    }
+}
+
+
