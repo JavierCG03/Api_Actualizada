@@ -1,9 +1,11 @@
-﻿using CarSlineAPI.Data;
+﻿// ============================================
+// Controllers/OrdenesController.cs - ACTUALIZADO
+// ============================================
+using CarSlineAPI.Data;
 using CarSlineAPI.Models.DTOs;
 using CarSlineAPI.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Xml.Linq;
 
 namespace CarSlineAPI.Controllers
 {
@@ -21,72 +23,13 @@ namespace CarSlineAPI.Controllers
         }
 
         /// <summary>
-        /// NUEVO: Obtener historial de servicios de un vehículo (últimos 6 meses)
+        /// ✅ NUEVO: Crear orden con lista de trabajos
+        /// POST api/Ordenes/crear-con-trabajos
         /// </summary>
-        [HttpGet("historial-vehiculo/{vehiculoId}")]
-        [ProducesResponseType(typeof(HistorialVehiculoResponse), StatusCodes.Status200OK)]
-        public async Task<IActionResult> ObtenerHistorialVehiculo(int vehiculoId)
-        {
-            try
-            {
-                // Calcular fecha de hace 6 meses
-                var fechaLimite = DateTime.Now.AddMonths(-6);
-
-                var historial = await _db.Ordenes
-                    .Include(o => o.TipoServicio)
-                    .Include(o => o.ServiciosExtra)
-                        .ThenInclude(se => se.ServicioExtra)
-                    .Where(o => o.VehiculoId == vehiculoId
-                             && o.Activo
-                             && o.EstadoOrdenId == 4 // Solo órdenes entregadas
-                             && o.FechaCreacion >= fechaLimite)
-                    .OrderByDescending(o => o.FechaCreacion)
-                    .Select(o => new HistorialServicioDto
-                    {
-                        NumeroOrden = o.NumeroOrden,
-                        FechaServicio = o.FechaCreacion,
-                        TipoServicio = o.TipoServicio != null ? o.TipoServicio.NombreServicio : "Servicio General",
-                        KilometrajeRegistrado = o.KilometrajeActual,
-                        CostoTotal = o.CostoTotal,
-                        ServiciosExtra = o.ServiciosExtra.Select(se => new ServicioExtraHistorialDto
-                        {
-                            NombreServicio = se.ServicioExtra != null ? se.ServicioExtra.NombreServicio : "",
-                            Precio = se.PrecioAplicado
-                        }).ToList(),
-                        ObservacionesAsesor = o.ObservacionesAsesor ?? ""
-                    })
-                    .ToListAsync();
-
-                // Calcular estadísticas
-                var totalServicios = historial.Count;
-                var costoPromedio = historial.Any() ? historial.Average(h => h.CostoTotal) : 0;
-                var ultimoServicio = historial.FirstOrDefault();
-
-                return Ok(new HistorialVehiculoResponse
-                {
-                    Success = true,
-                    Message = $"Se encontraron {totalServicios} servicio(s) en los últimos 6 meses",
-                    Historial = historial,
-                    TotalServicios = totalServicios,
-                    CostoPromedio = costoPromedio,
-                    UltimoKilometraje = ultimoServicio?.KilometrajeRegistrado ?? 0,
-                    UltimaFechaServicio = ultimoServicio?.FechaServicio
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error al obtener historial del vehículo {vehiculoId}");
-                return StatusCode(500, new HistorialVehiculoResponse
-                {
-                    Success = false,
-                    Message = "Error al obtener historial del vehículo",
-                    Historial = new List<HistorialServicioDto>()
-                });
-            }
-        }
-
-        [HttpPost("crear")]
-        public async Task<IActionResult> CrearOrden([FromBody] CrearOrdenRequest request, [FromHeader(Name = "X-User-Id")] int asesorId)
+        [HttpPost("crear-con-trabajos")]
+        public async Task<IActionResult> CrearOrdenConTrabajos(
+            [FromBody] CrearOrdenConTrabajosRequest request,
+            [FromHeader(Name = "X-User-Id")] int asesorId)
         {
             if (!ModelState.IsValid)
                 return BadRequest(new { Success = false, Message = "Datos inválidos" });
@@ -99,7 +42,7 @@ namespace CarSlineAPI.Controllers
 
                 try
                 {
-                    // prefijo
+                    // 1. Generar número de orden
                     var prefijo = request.TipoOrdenId switch
                     {
                         1 => "SRV",
@@ -110,8 +53,7 @@ namespace CarSlineAPI.Controllers
                         _ => "ORD"
                     };
 
-                    // obtener max correlativo
-                    var maxNumero = await _db.Ordenes
+                    var maxNumero = await _db.OrdenesGenerales
                         .Where(o => o.NumeroOrden.StartsWith(prefijo + "-"))
                         .Select(o => o.NumeroOrden)
                         .ToListAsync();
@@ -133,152 +75,342 @@ namespace CarSlineAPI.Controllers
 
                     var numeroOrden = $"{prefijo}-{siguiente:D6}";
 
-                    // costo base
-                    decimal costoTotal = 0;
-                    if (request.TipoServicioId.HasValue)
-                    {
-                        var tipo = await _db.TiposServicio.FindAsync(request.TipoServicioId.Value);
-                        if (tipo != null) costoTotal = tipo.PrecioBase;
-                    }
-
-                    // costo extras
-                    if (request.ServiciosExtraIds != null && request.ServiciosExtraIds.Any())
-                    {
-                        var extras = await _db.ServiciosExtra
-                            .Where(e => request.ServiciosExtraIds.Contains(e.Id))
-                            .ToListAsync();
-
-                        costoTotal += extras.Sum(e => e.Precio);
-                    }
-
-                    var orden = new Orden
+                    // 2. Crear orden general
+                    var ordenGeneral = new OrdenGeneral
                     {
                         NumeroOrden = numeroOrden,
                         TipoOrdenId = request.TipoOrdenId,
                         ClienteId = request.ClienteId,
                         VehiculoId = request.VehiculoId,
                         AsesorId = asesorId,
-                        TipoServicioId = request.TipoServicioId,
                         KilometrajeActual = request.KilometrajeActual,
-                        EstadoOrdenId = 1,
+                        EstadoOrdenId = 1, // Pendiente
                         FechaHoraPromesaEntrega = request.FechaHoraPromesaEntrega,
                         ObservacionesAsesor = request.ObservacionesAsesor,
-                        CostoTotal = costoTotal,
+                        CostoTotal = 0, // Se calculará después
                         FechaCreacion = DateTime.Now,
-                        Activo = true
-                    };
-                    _db.Ordenes.Add(orden);
-                    await _db.SaveChangesAsync();
-
-                    var orden2 = new OrdenGeneral
-                    {
-                        NumeroOrden = numeroOrden,
-                        TipoOrdenId = request.TipoOrdenId,
-                        ClienteId = request.ClienteId,
-                        VehiculoId = request.VehiculoId,
-                        AsesorId = asesorId,
-                        TipoServicioId = request.TipoServicioId,
-                        KilometrajeActual = request.KilometrajeActual,
-                        EstadoOrdenId = 1,
-                        FechaHoraPromesaEntrega = request.FechaHoraPromesaEntrega,
-                        CostoTotal = costoTotal,
-                        FechaCreacion = DateTime.Now,
-                        Activo = true
+                        Activo = true,
+                        TotalTrabajos = request.Trabajos.Count,
+                        TrabajosCompletados = 0,
+                        ProgresoGeneral = 0
                     };
 
-                    _db.OrdenesGenerales.Add(orden2);
+                    _db.OrdenesGenerales.Add(ordenGeneral);
                     await _db.SaveChangesAsync();
 
-                    // insertar servicios extra aplicados
-                    if (request.ServiciosExtraIds != null && request.ServiciosExtraIds.Any())
+                    // 3. Crear trabajos asociados
+                    foreach (var trabajoDescripcion in request.Trabajos)
                     {
-                        var extras = await _db.ServiciosExtra
-                            .Where(e => request.ServiciosExtraIds.Contains(e.Id))
-                            .ToListAsync();
-
-                        foreach (var se in extras)
+                        var trabajo = new TrabajoPorOrden
                         {
-                            var oe = new OrdenServicioExtra
-                            {
-                                OrdenId = orden.Id,
-                                ServicioExtraId = se.Id,
-                                PrecioAplicado = se.Precio
-                            };
-                            _db.OrdenesServiciosExtra.Add(oe);
-                        }
+                            OrdenGeneralId = ordenGeneral.Id,
+                            Trabajo = trabajoDescripcion,
+                            EstadoTrabajo = 1, // Pendiente
+                            Activo = true,
+                            FechaCreacion = DateTime.Now
+                        };
 
-                        await _db.SaveChangesAsync();
+                        _db.TrabajosPorOrden.Add(trabajo);
                     }
 
+                    await _db.SaveChangesAsync();
                     await transaction.CommitAsync();
 
-                    return Ok(new { Success = true, NumeroOrden = numeroOrden, OrdenId = orden.Id, CostoTotal = costoTotal });
-                }
+                    _logger.LogInformation($"Orden {numeroOrden} creada con {request.Trabajos.Count} trabajos");
 
+                    return Ok(new
+                    {
+                        Success = true,
+                        NumeroOrden = numeroOrden,
+                        OrdenId = ordenGeneral.Id,
+                        TotalTrabajos = request.Trabajos.Count,
+                        Message = "Orden creada exitosamente"
+                    });
+                }
                 catch (Exception ex)
                 {
                     await transaction.RollbackAsync();
-                    _logger.LogError(ex, "Error al crear orden");
+                    _logger.LogError(ex, "Error al crear orden con trabajos");
                     return StatusCode(500, new { Success = false, Message = "Error al crear orden" });
                 }
             });
         }
 
+        /// <summary>
+        /// Obtener órdenes por tipo (para asesor)
+        /// GET api/Ordenes/asesor/{tipoOrdenId}
+        /// </summary>
         [HttpGet("asesor/{tipoOrdenId}")]
-        public async Task<IActionResult> ObtenerOrdenesPorTipo(int tipoOrdenId, [FromHeader(Name = "X-User-Id")] int asesorId)
+        public async Task<IActionResult> ObtenerOrdenesPorTipo(
+            int tipoOrdenId,
+            [FromHeader(Name = "X-User-Id")] int asesorId)
         {
-            var ordenes = await _db.Ordenes
-                .Include(o => o.Cliente)
-                .Include(o => o.Vehiculo)
-                .Include(o => o.TipoServicio)
-                .Where(o => o.TipoOrdenId == tipoOrdenId
-                         && o.AsesorId == asesorId
-                         && o.Activo
-                         && new[] { 1, 2, 3 }.Contains(o.EstadoOrdenId))
-                .OrderBy(o => o.FechaHoraPromesaEntrega)
-                .Select(o => new
-                {
-                    o.Id,
-                    o.NumeroOrden,
-                    VehiculoCompleto = $"{o.Vehiculo.Marca} {o.Vehiculo.Modelo} {o.Vehiculo.Anio}",
-                    ClienteNombre = o.Cliente.NombreCompleto,
-                    ClienteTelefono = o.Cliente.TelefonoMovil,
-                    HoraPromesa = o.FechaHoraPromesaEntrega.ToString("HH:mm"),
-                    HoraInicio = o.FechaInicioProceso.HasValue ? o.FechaInicioProceso.Value.ToString("HH:mm") : "-",
-                    HoraFin = o.FechaFinalizacion.HasValue ? o.FechaFinalizacion.Value.ToString("HH:mm") : "-",
-                    TipoServicio = o.TipoServicio != null ? o.TipoServicio.NombreServicio : "Sin servicio",
-                    o.CostoTotal,
-                    EstadoId = o.EstadoOrdenId
-                })
-                .ToListAsync();
+            try
+            {
+                var ordenes = await _db.OrdenesGenerales
+                    .Include(o => o.Cliente)
+                    .Include(o => o.Vehiculo)
+                    .Include(o => o.Trabajos.Where(t => t.Activo))
+                        .ThenInclude(t => t.TecnicoAsignado)
+                    .Where(o => o.TipoOrdenId == tipoOrdenId
+                             && o.AsesorId == asesorId
+                             && o.Activo
+                             && new[] { 1, 2, 3 }.Contains(o.EstadoOrdenId))
+                    .OrderBy(o => o.FechaHoraPromesaEntrega)
+                    .Select(o => new OrdenConTrabajosDto
+                    {
+                        Id = o.Id,
+                        NumeroOrden = o.NumeroOrden,
+                        TipoOrdenId = o.TipoOrdenId,
+                        ClienteNombre = o.Cliente.NombreCompleto,
+                        ClienteTelefono = o.Cliente.TelefonoMovil,
+                        VehiculoCompleto = $"{o.Vehiculo.Marca} {o.Vehiculo.Modelo} {o.Vehiculo.Anio}",
+                        VIN = o.Vehiculo.VIN,
+                        Placas = o.Vehiculo.Placas ?? "",
+                        FechaHoraPromesaEntrega = o.FechaHoraPromesaEntrega,
+                        EstadoOrdenId = o.EstadoOrdenId,
+                        TotalTrabajos = o.TotalTrabajos,
+                        TrabajosCompletados = o.TrabajosCompletados,
+                        ProgresoGeneral = o.ProgresoGeneral,
+                        CostoTotal = o.CostoTotal,
+                        Trabajos = o.Trabajos
+                            .Where(t => t.Activo)
+                            .Select(t => new TrabajoDto
+                            {
+                                Id = t.Id,
+                                Trabajo = t.Trabajo,
+                                TecnicoNombre = t.TecnicoAsignado != null ? t.TecnicoAsignado.NombreCompleto : null,
+                                EstadoTrabajo = t.EstadoTrabajo,
+                                FechaHoraInicio = t.FechaHoraInicio,
+                                FechaHoraTermino = t.FechaHoraTermino
+                            }).ToList()
+                    })
+                    .ToListAsync();
 
-            return Ok(ordenes);
+                return Ok(ordenes);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener órdenes");
+                return StatusCode(500, new { Message = "Error al obtener órdenes" });
+            }
         }
 
+        /// <summary>
+        /// Obtener orden detallada con todos sus trabajos
+        /// GET api/Ordenes/detalle/{ordenId}
+        /// </summary>
+        [HttpGet("detalle/{ordenId}")]
+        public async Task<IActionResult> ObtenerDetalleOrden(int ordenId)
+        {
+            try
+            {
+                var orden = await _db.OrdenesGenerales
+                    .Include(o => o.Cliente)
+                    .Include(o => o.Vehiculo)
+                    .Include(o => o.Asesor)
+                    .Include(o => o.Trabajos.Where(t => t.Activo))
+                        .ThenInclude(t => t.TecnicoAsignado)
+                    .Include(o => o.Trabajos)
+                        .ThenInclude(t => t.EstadoTrabajoNavegacion)
+                    .Where(o => o.Id == ordenId && o.Activo)
+                    .Select(o => new OrdenConTrabajosDto
+                    {
+                        Id = o.Id,
+                        NumeroOrden = o.NumeroOrden,
+                        TipoOrdenId = o.TipoOrdenId,
+                        ClienteNombre = o.Cliente.NombreCompleto,
+                        ClienteTelefono = o.Cliente.TelefonoMovil,
+                        VehiculoCompleto = $"{o.Vehiculo.Marca} {o.Vehiculo.Modelo} {o.Vehiculo.Anio}",
+                        VIN = o.Vehiculo.VIN,
+                        Placas = o.Vehiculo.Placas ?? "",
+                        AsesorNombre = o.Asesor.NombreCompleto,
+                        KilometrajeActual = o.KilometrajeActual,
+                        FechaCreacion = o.FechaCreacion,
+                        FechaHoraPromesaEntrega = o.FechaHoraPromesaEntrega,
+                        EstadoOrdenId = o.EstadoOrdenId,
+                        CostoTotal = o.CostoTotal,
+                        TotalTrabajos = o.TotalTrabajos,
+                        TrabajosCompletados = o.TrabajosCompletados,
+                        ProgresoGeneral = o.ProgresoGeneral,
+                        ObservacionesAsesor = o.ObservacionesAsesor,
+                        Trabajos = o.Trabajos
+                            .Where(t => t.Activo)
+                            .Select(t => new TrabajoDto
+                            {
+                                Id = t.Id,
+                                Trabajo = t.Trabajo,
+                                TecnicoAsignadoId = t.TecnicoAsignadoId,
+                                TecnicoNombre = t.TecnicoAsignado != null ? t.TecnicoAsignado.NombreCompleto : null,
+                                FechaHoraAsignacionTecnico = t.FechaHoraAsignacionTecnico,
+                                FechaHoraInicio = t.FechaHoraInicio,
+                                FechaHoraTermino = t.FechaHoraTermino,
+                                IncidenciasServicio = t.IncidenciasServicio,
+                                ComentariosTecnico = t.ComentariosTecnico,
+                                ComentariosJefeTaller = t.ComentariosJefeTaller,
+                                EstadoTrabajo = t.EstadoTrabajo,
+                                EstadoTrabajoNombre = t.EstadoTrabajoNavegacion != null ? t.EstadoTrabajoNavegacion.NombreEstado : null,
+                                ColorEstado = t.EstadoTrabajoNavegacion != null ? t.EstadoTrabajoNavegacion.Color : null
+                            }).ToList()
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (orden == null)
+                    return NotFound(new { Message = "Orden no encontrada" });
+
+                return Ok(orden);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al obtener detalle de orden {ordenId}");
+                return StatusCode(500, new { Message = "Error al obtener detalle de orden" });
+            }
+        }
+
+        /// <summary>
+        /// Cancelar orden
+        /// PUT api/Ordenes/cancelar/{ordenId}
+        /// </summary>
         [HttpPut("cancelar/{ordenId}")]
         public async Task<IActionResult> CancelarOrden(int ordenId)
         {
-            var orden = await _db.Ordenes.FindAsync(ordenId);
-            if (orden == null) return NotFound(new { Success = false, Message = "Orden no encontrada" });
+            try
+            {
+                var orden = await _db.OrdenesGenerales.FindAsync(ordenId);
+                if (orden == null)
+                    return NotFound(new { Success = false, Message = "Orden no encontrada" });
 
-            orden.EstadoOrdenId = 5;
-            orden.Activo = false;
-            await _db.SaveChangesAsync();
+                orden.EstadoOrdenId = 5; // Cancelada
+                orden.Activo = false;
 
-            return Ok(new { Success = true, Message = "Orden cancelada" });
+                // Cancelar todos los trabajos pendientes
+                var trabajos = await _db.TrabajosPorOrden
+                    .Where(t => t.OrdenGeneralId == ordenId && t.Activo && t.EstadoTrabajo == 1)
+                    .ToListAsync();
+
+                foreach (var trabajo in trabajos)
+                {
+                    trabajo.EstadoTrabajo = 5; // Cancelado
+                }
+
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation($"Orden {ordenId} cancelada");
+
+                return Ok(new { Success = true, Message = "Orden cancelada" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al cancelar orden {ordenId}");
+                return StatusCode(500, new { Success = false, Message = "Error al cancelar orden" });
+            }
         }
 
+        /// <summary>
+        /// Entregar orden (solo si todos los trabajos están completados)
+        /// PUT api/Ordenes/entregar/{ordenId}
+        /// </summary>
         [HttpPut("entregar/{ordenId}")]
         public async Task<IActionResult> EntregarOrden(int ordenId)
         {
-            var orden = await _db.Ordenes.FindAsync(ordenId);
-            if (orden == null) return NotFound(new { Success = false, Message = "Orden no encontrada" });
+            try
+            {
+                var orden = await _db.OrdenesGenerales
+                    .Include(o => o.Trabajos)
+                    .FirstOrDefaultAsync(o => o.Id == ordenId);
 
-            orden.EstadoOrdenId = 4;
-            orden.FechaEntrega = DateTime.Now;
-            await _db.SaveChangesAsync();
+                if (orden == null)
+                    return NotFound(new { Success = false, Message = "Orden no encontrada" });
 
-            return Ok(new { Success = true, Message = "Orden Entregada" });
+                // Verificar que todos los trabajos estén completados
+                var trabajosPendientes = orden.Trabajos.Count(t => t.Activo && t.EstadoTrabajo != 3);
+
+                if (trabajosPendientes > 0)
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = $"No se puede entregar. Hay {trabajosPendientes} trabajo(s) sin completar"
+                    });
+
+                orden.EstadoOrdenId = 4; // Entregada
+                orden.FechaEntrega = DateTime.Now;
+
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation($"Orden {ordenId} entregada");
+
+                return Ok(new { Success = true, Message = "Orden entregada" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al entregar orden {ordenId}");
+                return StatusCode(500, new { Success = false, Message = "Error al entregar orden" });
+            }
+        }
+
+        /// <summary>
+        /// Obtener historial de vehículo (últimos 6 meses)
+        /// GET api/Ordenes/historial-vehiculo/{vehiculoId}
+        /// </summary>
+        [HttpGet("historial-vehiculo/{vehiculoId}")]
+        [ProducesResponseType(typeof(HistorialVehiculoResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ObtenerHistorialVehiculo(int vehiculoId)
+        {
+            try
+            {
+                var fechaLimite = DateTime.Now.AddMonths(-6);
+
+                var ordenes = await _db.OrdenesGenerales
+                    .Include(o => o.Trabajos)
+                    .Where(o => o.VehiculoId == vehiculoId
+                             && o.Activo
+                             && o.EstadoOrdenId == 4 // Solo órdenes entregadas
+                             && o.FechaCreacion >= fechaLimite)
+                    .OrderByDescending(o => o.FechaCreacion)
+                    .ToListAsync();
+
+                var historial = ordenes.Select(o => new HistorialServicioDto
+                {
+                    NumeroOrden = o.NumeroOrden,
+                    FechaServicio = o.FechaCreacion,
+                    TipoServicio = "Orden General", // O puedes mapear según TipoOrdenId
+                    KilometrajeRegistrado = o.KilometrajeActual,
+                    CostoTotal = o.CostoTotal,
+                    ServiciosExtra = o.Trabajos
+                        .Where(t => t.Activo)
+                        .Select(t => new ServicioExtraHistorialDto
+                        {
+                            NombreServicio = t.Trabajo,
+                            Precio = 0 // Ajustar si tienes precios por trabajo
+                        }).ToList(),
+                    ObservacionesAsesor = o.ObservacionesAsesor ?? ""
+                }).ToList();
+
+                var totalServicios = historial.Count;
+                var costoPromedio = historial.Any() ? historial.Average(h => h.CostoTotal) : 0;
+                var ultimoServicio = historial.FirstOrDefault();
+
+                return Ok(new HistorialVehiculoResponse
+                {
+                    Success = true,
+                    Message = $"Se encontraron {totalServicios} servicio(s)",
+                    Historial = historial,
+                    TotalServicios = totalServicios,
+                    CostoPromedio = costoPromedio,
+                    UltimoKilometraje = ultimoServicio?.KilometrajeRegistrado ?? 0,
+                    UltimaFechaServicio = ultimoServicio?.FechaServicio
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al obtener historial de vehículo {vehiculoId}");
+                return StatusCode(500, new HistorialVehiculoResponse
+                {
+                    Success = false,
+                    Message = "Error al obtener historial",
+                    Historial = new List<HistorialServicioDto>()
+                });
+            }
         }
     }
 }

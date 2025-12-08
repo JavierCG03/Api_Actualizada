@@ -164,25 +164,6 @@ namespace CarSlineAPI.Models.Entities
         public bool Activo { get; set; } = true;
     }
 
-    [Table("ServiciosExtra")]
-    public class ServicioExtra
-    {
-        [Key]
-        public int Id { get; set; }
-
-        [Required, MaxLength(150)]
-        public string NombreServicio { get; set; } = string.Empty;
-
-        [MaxLength(500)]
-        public string? Descripcion { get; set; }
-
-        public decimal Precio { get; set; }
-
-        [MaxLength(100)]
-        public string? Categoria { get; set; }
-
-        public bool Activo { get; set; } = true;
-    }
 
     [Table("ServiciosFrecuentes")]
     public class ServicioFrecuente
@@ -203,56 +184,6 @@ namespace CarSlineAPI.Models.Entities
 
         public bool Activo { get; set; } = true;
     }
-
-    [Table("Ordenes")]
-    public class Orden
-    {
-        [Key]
-        public int Id { get; set; }
-
-        [Required, MaxLength(50)]
-        public string NumeroOrden { get; set; } = string.Empty;
-
-        public int TipoOrdenId { get; set; } // 1=SRV, etc.
-
-        public int ClienteId { get; set; }
-
-        public int VehiculoId { get; set; }
-
-        public int AsesorId { get; set; }
-
-        public int? TipoServicioId { get; set; }
-
-        public int KilometrajeActual { get; set; }
-
-        public int EstadoOrdenId { get; set; } = 1;
-
-        public DateTime FechaHoraPromesaEntrega { get; set; }
-
-        public DateTime FechaCreacion { get; set; } = DateTime.Now;
-
-        public DateTime? FechaInicioProceso { get; set; }
-
-        public DateTime? FechaFinalizacion { get; set; }
-
-        public DateTime? FechaEntrega { get; set; }
-
-        public string? ObservacionesAsesor { get; set; }
-
-        public decimal CostoTotal { get; set; }
-
-        public bool Activo { get; set; } = true;
-
-        // relaciones
-        public virtual ICollection<OrdenServicioExtra> ServiciosExtra { get; set; } = new List<OrdenServicioExtra>();
-        public virtual ICollection<OrdenServicioExtra> ServiciosFrecuentes { get; set; } = new List<OrdenServicioExtra>();
-        public virtual Cliente Cliente { get; set; }
-        public virtual Vehiculo Vehiculo { get; set; }
-        public virtual TipoServicio TipoServicio { get; set; }
-        //public virtual Usuario Tecnico { get; set; }
-        public virtual Usuario Asesor { get; set; }
-    }
-
 
     [Table("OrdenesGenerales")]
     public class OrdenGeneral
@@ -277,12 +208,14 @@ namespace CarSlineAPI.Models.Entities
         public string? ObservacionesJefe { get; set; }
         public decimal CostoTotal { get; set; }
         public decimal TiempoTotalHoras { get; set; }
+        public int TotalTrabajos { get; set; }
+        public int TrabajosCompletados { get; set; }
+        public decimal ProgresoGeneral { get; set; }
         public int EstadoOrdenId { get; set; } = 1;
         public bool Activo { get; set; } = true;
 
         // relaciones
-        public virtual ICollection<OrdenServicioExtra> ServiciosExtra { get; set; } = new List<OrdenServicioExtra>();
-        public virtual ICollection<OrdenServicioExtra> ServiciosFrecuentes { get; set; } = new List<OrdenServicioExtra>();
+        public virtual ICollection<TrabajoPorOrden> Trabajos { get; set; } = new List<TrabajoPorOrden>();
         public virtual Cliente Cliente { get; set; }
         public virtual Vehiculo Vehiculo { get; set; }
         public virtual Usuario Asesor { get; set; }
@@ -291,25 +224,6 @@ namespace CarSlineAPI.Models.Entities
 
     }
 
-    [Table("OrdenServiciosExtra")]
-    public class OrdenServicioExtra
-    {
-        [Key]
-        public int Id { get; set; }
-
-        public int OrdenId { get; set; }
-
-        public int ServicioExtraId { get; set; }
-
-        public decimal PrecioAplicado { get; set; }
-
-        // navegación
-        [ForeignKey("OrdenId")]
-        public Orden? Orden { get; set; }
-
-        [ForeignKey("ServicioExtraId")]
-        public ServicioExtra? ServicioExtra { get; set; }
-    }
 
     [Table("HistorialServicios")]
     public class HistorialServicio
@@ -364,6 +278,71 @@ namespace CarSlineAPI.Models.Entities
         public DateTime FechaUltimaModificacion { get; set; } = DateTime.Now;
 
         public bool Activo { get; set; } = true;
+    }
+    [Table("trabajopororden")]
+    public class TrabajoPorOrden
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int OrdenGeneralId { get; set; }
+
+        [Required]
+        [Column(TypeName = "TEXT")]
+        public string Trabajo { get; set; } = string.Empty;
+
+        public int? TecnicoAsignadoId { get; set; }
+
+        public DateTime? FechaHoraAsignacionTecnico { get; set; }
+
+        public DateTime? FechaHoraInicio { get; set; }
+
+        public DateTime? FechaHoraTermino { get; set; }
+
+        [Column(TypeName = "TEXT")]
+        public string? IncidenciasServicio { get; set; }
+
+        [Column(TypeName = "TEXT")]
+        public string? ComentariosTecnico { get; set; }
+
+        [Column(TypeName = "TEXT")]
+        public string? ComentariosJefeTaller { get; set; }
+
+        [Required]
+        public int EstadoTrabajo { get; set; } = 1; // 1=Pendiente
+
+        public bool Activo { get; set; } = true;
+
+        public DateTime FechaCreacion { get; set; } = DateTime.Now;
+
+        // Navegación
+        [ForeignKey("OrdenGeneralId")]
+        public virtual OrdenGeneral? OrdenGeneral { get; set; }
+
+        [ForeignKey("TecnicoAsignadoId")]
+        public virtual Usuario? TecnicoAsignado { get; set; }
+
+        [ForeignKey("EstadoTrabajo")]
+        public virtual EstadoTrabajo? EstadoTrabajoNavegacion { get; set; }
+    }
+
+    [Table("estadostrabajo")]
+    public class EstadoTrabajo
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required, MaxLength(50)]
+        public string NombreEstado { get; set; } = string.Empty;
+
+        [MaxLength(200)]
+        public string? Descripcion { get; set; }
+
+        [MaxLength(20)]
+        public string? Color { get; set; }
+
+        public int? Orden { get; set; }
     }
 }
 
