@@ -82,6 +82,7 @@ namespace CarSlineAPI.Controllers
                         TipoOrdenId = request.TipoOrdenId,
                         ClienteId = request.ClienteId,
                         VehiculoId = request.VehiculoId,
+                        TipoServicioId = request.TipoServicioId,
                         AsesorId = asesorId,
                         KilometrajeActual = request.KilometrajeActual,
                         EstadoOrdenId = 1, // Pendiente

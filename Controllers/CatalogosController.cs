@@ -28,8 +28,8 @@ namespace CarSlineAPI.Controllers
             return Ok(tipos);
         }
 
-        [HttpGet("servicios-extra")]
-        public async Task<IActionResult> ObtenerServiciosExtra()
+        [HttpGet("servicios-frecuentes")]
+        public async Task<IActionResult> ObtenerServiciosFrecuentes()
         {
             var servicios = await _db.ServiciosFrecuentes
                 .Where(s => s.Activo)

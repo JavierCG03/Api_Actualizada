@@ -220,7 +220,6 @@ namespace CarSlineAPI.Models.Entities
         public virtual Vehiculo Vehiculo { get; set; }
         public virtual Usuario Asesor { get; set; }
         public virtual TipoServicio TipoServicio { get; set; }
-        //public virtual Usuario Tecnico { get; set; }
 
     }
 
