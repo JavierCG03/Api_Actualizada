@@ -349,23 +349,20 @@ namespace CarSlineAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Obtener historial de vehículo (últimos 6 meses)
-        /// GET api/Ordenes/historial-vehiculo/{vehiculoId}
-        /// </summary>
-        [HttpGet("historial-vehiculo/{vehiculoId}")]
+        [HttpGet("historial-servicio/{vehiculoId}")]
         [ProducesResponseType(typeof(HistorialVehiculoResponse), StatusCodes.Status200OK)]
-        public async Task<IActionResult> ObtenerHistorialVehiculo(int vehiculoId)
+        public async Task<IActionResult> ObtenerHistorialServicio(int vehiculoId)
         {
             try
             {
-                var fechaLimite = DateTime.Now.AddMonths(-6);
+                var fechaLimite = DateTime.Now.AddMonths(-12);
 
                 var ordenes = await _db.OrdenesGenerales
-                    .Include(o => o.Trabajos)
+                    .Include(o => o.TipoServicio) // Necesario para o.TipoServicio.NombreServicio
                     .Where(o => o.VehiculoId == vehiculoId
                              && o.Activo
-                             && o.EstadoOrdenId == 4 // Solo órdenes entregadas
+                             && o.TipoOrdenId == 1   // Solo órdenes de servicio
+                             && o.EstadoOrdenId == 4 // Solo órdenes ENTREGADAS
                              && o.FechaCreacion >= fechaLimite)
                     .OrderByDescending(o => o.FechaCreacion)
                     .ToListAsync();
@@ -374,44 +371,35 @@ namespace CarSlineAPI.Controllers
                 {
                     NumeroOrden = o.NumeroOrden,
                     FechaServicio = o.FechaCreacion,
-                    TipoServicio = "Orden General", // O puedes mapear según TipoOrdenId
+                    TipoServicio = o.TipoServicio.NombreServicio ?? "",
                     KilometrajeRegistrado = o.KilometrajeActual,
-                    CostoTotal = o.CostoTotal,
-                    ServiciosExtra = o.Trabajos
-                        .Where(t => t.Activo)
-                        .Select(t => new ServicioExtraHistorialDto
-                        {
-                            NombreServicio = t.Trabajo,
-                            Precio = 0 // Ajustar si tienes precios por trabajo
-                        }).ToList(),
                     ObservacionesAsesor = o.ObservacionesAsesor ?? ""
                 }).ToList();
 
-                var totalServicios = historial.Count;
-                var costoPromedio = historial.Any() ? historial.Average(h => h.CostoTotal) : 0;
                 var ultimoServicio = historial.FirstOrDefault();
 
                 return Ok(new HistorialVehiculoResponse
                 {
                     Success = true,
-                    Message = $"Se encontraron {totalServicios} servicio(s)",
+                    Message = historial.Any() ? "Historial encontrado" : "Sin servicios recientes",
                     Historial = historial,
-                    TotalServicios = totalServicios,
-                    CostoPromedio = costoPromedio,
+                    UltimoServicio = ultimoServicio?.TipoServicio ?? "",
                     UltimoKilometraje = ultimoServicio?.KilometrajeRegistrado ?? 0,
                     UltimaFechaServicio = ultimoServicio?.FechaServicio
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al obtener historial de vehículo {vehiculoId}");
+                _logger.LogError(ex, $"Error al obtener historial del vehículo {vehiculoId}");
+
                 return StatusCode(500, new HistorialVehiculoResponse
                 {
                     Success = false,
-                    Message = "Error al obtener historial",
+                    Message = "Error al obtener historial de servicios",
                     Historial = new List<HistorialServicioDto>()
                 });
             }
         }
+
     }
 }
