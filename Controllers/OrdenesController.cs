@@ -143,8 +143,8 @@ namespace CarSlineAPI.Controllers
         /// </summary>
         [HttpGet("asesor/{tipoOrdenId}")]
         public async Task<IActionResult> ObtenerOrdenesPorTipo(
-            int tipoOrdenId,
-            [FromHeader(Name = "X-User-Id")] int asesorId)
+        int tipoOrdenId,
+        [FromHeader(Name = "X-User-Id")] int asesorId)
         {
             try
             {
@@ -155,6 +155,59 @@ namespace CarSlineAPI.Controllers
                         .ThenInclude(t => t.TecnicoAsignado)
                     .Where(o => o.TipoOrdenId == tipoOrdenId
                              && o.AsesorId == asesorId
+                             && o.Activo
+                             && new[] { 1, 2, 3 }.Contains(o.EstadoOrdenId))
+                    .OrderBy(o => o.FechaHoraPromesaEntrega)
+                    .Select(o => new OrdenConTrabajosDto
+                    {
+                        Id = o.Id,
+                        NumeroOrden = o.NumeroOrden,
+                        TipoOrdenId = o.TipoOrdenId,
+                        ClienteNombre = o.Cliente.NombreCompleto,
+                        ClienteTelefono = o.Cliente.TelefonoMovil,
+                        VehiculoCompleto = $"{o.Vehiculo.Marca} {o.Vehiculo.Modelo} {o.Vehiculo.Anio}",
+                        VIN = o.Vehiculo.VIN,
+                        Placas = o.Vehiculo.Placas ?? "",
+                        FechaHoraPromesaEntrega = o.FechaHoraPromesaEntrega,
+                        EstadoOrdenId = o.EstadoOrdenId,
+                        TotalTrabajos = o.TotalTrabajos,
+                        TrabajosCompletados = o.TrabajosCompletados,
+                        ProgresoGeneral = o.ProgresoGeneral,
+                        CostoTotal = o.CostoTotal,
+                        Trabajos = o.Trabajos
+                            .Where(t => t.Activo)
+                            .Select(t => new TrabajoDto
+                            {
+                                Id = t.Id,
+                                Trabajo = t.Trabajo,
+                                TecnicoNombre = t.TecnicoAsignado != null ? t.TecnicoAsignado.NombreCompleto : null,
+                                EstadoTrabajo = t.EstadoTrabajo,
+                                FechaHoraInicio = t.FechaHoraInicio,
+                                FechaHoraTermino = t.FechaHoraTermino
+                            }).ToList()
+                    })
+                    .ToListAsync();
+
+                return Ok(ordenes);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener órdenes");
+                return StatusCode(500, new { Message = "Error al obtener órdenes" });
+            }
+        }
+
+        [HttpGet("Jefe-Taller/{tipoOrdenId}")]// Para obtener todas las ordenes generales 
+        public async Task<IActionResult> ObtenerOrdenesPorTipo_Jefe(int tipoOrdenId)
+        {
+            try
+            {
+                var ordenes = await _db.OrdenesGenerales
+                    .Include(o => o.Cliente)
+                    .Include(o => o.Vehiculo)
+                    .Include(o => o.Trabajos.Where(t => t.Activo))
+                        .ThenInclude(t => t.TecnicoAsignado)
+                    .Where(o => o.TipoOrdenId == tipoOrdenId
                              && o.Activo
                              && new[] { 1, 2, 3 }.Contains(o.EstadoOrdenId))
                     .OrderBy(o => o.FechaHoraPromesaEntrega)

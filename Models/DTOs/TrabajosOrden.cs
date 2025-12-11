@@ -141,7 +141,7 @@ namespace CarSlineAPI.Models.DTOs
 
         public string? ObservacionesAsesor { get; set; }
 
-        public int TipoServicioId { get; set; }
+        public int? TipoServicioId { get; set; }
 
         [Required]
         [MinLength(1, ErrorMessage = "Debe agregar al menos un trabajo")]
