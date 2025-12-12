@@ -144,6 +144,73 @@ namespace CarSlineAPI.Controllers
             });
         }
 
+        [HttpGet("buscarClienteId/{ClienteId}")]
+        [ProducesResponseType(typeof(BuscarVehiculosResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> BuscarVehiculosPorClienteId(int ClienteId)
+        {
+            try
+            {
+                if (ClienteId<0)
+                {
+                    return Ok(new BuscarVehiculosResponse
+                    {
+                        Success = false,
+                        Message = "Debes ingresar exactamente 4 caracteres",
+                        Vehiculos = new List<VehiculoDto>()
+                    });
+                }
+                // Buscar vehículos que le pertenecen al cliente
+                var vehiculos = await _db.Vehiculos
+                    .Include(v => v.Cliente)
+                    .Where(v => v.Activo && v.ClienteId == ClienteId)
+                    .OrderBy(v => v.Marca)
+                    .ThenBy(v => v.Modelo)
+                    .Take(10) // Limitar resultados
+                    .Select(v => new VehiculoDto
+                    {
+                        Id = v.Id,
+                        ClienteId = v.ClienteId,
+                        VIN = v.VIN,
+                        Marca = v.Marca ?? "",
+                        Modelo = v.Modelo ?? "",
+                        Version = v.Version ?? "",
+                        Anio = v.Anio ?? 0,
+                        Color = v.Color ?? "",
+                        Placas = v.Placas ?? "",
+                        KilometrajeInicial = v.KilometrajeInicial,
+                        NombreCliente = v.Cliente != null ? v.Cliente.NombreCompleto : ""
+                    })
+                    .ToListAsync();
+
+                if (!vehiculos.Any())
+                {
+                    return Ok(new BuscarVehiculosResponse
+                    {
+                        Success = false,
+                        Message = "No se encontraron vehículos asignados a este Cliente ",
+                        Vehiculos = new List<VehiculoDto>()
+                    });
+                }
+
+                return Ok(new BuscarVehiculosResponse
+                {
+                    Success = true,
+                    Message = $"Se encontraron {vehiculos.Count} vehículo(s)",
+                    Vehiculos = vehiculos
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al buscar vehiculos por ese cliente");
+                return StatusCode(500, new BuscarVehiculosResponse
+                {
+                    Success = false,
+                    Message = "Error al buscar vehículos",
+                    Vehiculos = new List<VehiculoDto>()
+                });
+            }
+        }
+
         /// <summary>
         /// NUEVO: Buscar vehículos por los últimos 4 dígitos del VIN
         /// Retorna lista si hay múltiples coincidencias
