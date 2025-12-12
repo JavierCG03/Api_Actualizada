@@ -54,7 +54,7 @@ namespace CarSlineAPI.Models.DTOs
         public DateTime? FechaHoraAsignacionTecnico { get; set; }
         public DateTime? FechaHoraInicio { get; set; }
         public DateTime? FechaHoraTermino { get; set; }
-        public string? IncidenciasServicio { get; set; }
+        public string? IndicacionesTrabajo { get; set; }
         public string? ComentariosTecnico { get; set; }
         public string? ComentariosJefeTaller { get; set; }
         public int EstadoTrabajo { get; set; }
@@ -119,6 +119,8 @@ namespace CarSlineAPI.Models.DTOs
         public bool TieneTrabajosCompletados => Trabajos.Any(t => t.EstaCompletado);
     }
 
+
+
     /// <summary>
     /// Request para crear orden con lista de trabajos
     /// </summary>
@@ -145,9 +147,16 @@ namespace CarSlineAPI.Models.DTOs
 
         [Required]
         [MinLength(1, ErrorMessage = "Debe agregar al menos un trabajo")]
-        public List<string> Trabajos { get; set; } = new();
-    }
+        public List<TrabajoCrearDto> Trabajos { get; set; } = new();
 
+    }
+    public class TrabajoCrearDto
+    {
+        [Required]
+        public string Trabajo { get; set; } = string.Empty;
+
+        public string? Indicaciones { get; set; }
+    }
     /// <summary>
     /// Response genérico para trabajos
     /// </summary>

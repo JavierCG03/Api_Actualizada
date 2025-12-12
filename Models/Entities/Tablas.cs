@@ -278,6 +278,7 @@ namespace CarSlineAPI.Models.Entities
 
         public bool Activo { get; set; } = true;
     }
+
     [Table("trabajopororden")]
     public class TrabajoPorOrden
     {
@@ -300,7 +301,7 @@ namespace CarSlineAPI.Models.Entities
         public DateTime? FechaHoraTermino { get; set; }
 
         [Column(TypeName = "TEXT")]
-        public string? IncidenciasServicio { get; set; }
+        public string? IndicacionesTrabajo { get; set; }
 
         [Column(TypeName = "TEXT")]
         public string? ComentariosTecnico { get; set; }

@@ -47,7 +47,7 @@ namespace CarSlineAPI.Controllers
                         FechaHoraAsignacionTecnico = t.FechaHoraAsignacionTecnico,
                         FechaHoraInicio = t.FechaHoraInicio,
                         FechaHoraTermino = t.FechaHoraTermino,
-                        IncidenciasServicio = t.IncidenciasServicio,
+                        IndicacionesTrabajo = t.IndicacionesTrabajo,
                         ComentariosTecnico = t.ComentariosTecnico,
                         ComentariosJefeTaller = t.ComentariosJefeTaller,
                         EstadoTrabajo = t.EstadoTrabajo,
@@ -92,7 +92,7 @@ namespace CarSlineAPI.Controllers
                         TipoOrdenId = o.TipoOrdenId,
                         ClienteNombre = o.Cliente.NombreCompleto,
                         ClienteTelefono = o.Cliente.TelefonoMovil,
-                        VehiculoCompleto = $"{o.Vehiculo.Marca} {o.Vehiculo.Modelo} {o.Vehiculo.Anio}",
+                        VehiculoCompleto = $"{o.Vehiculo.Marca} {o.Vehiculo.Modelo} {o.Vehiculo.Color} / {o.Vehiculo.Anio}",
                         VIN = o.Vehiculo.VIN,
                         Placas = o.Vehiculo.Placas ?? "",
                         AsesorNombre = o.Asesor.NombreCompleto,
@@ -117,7 +117,7 @@ namespace CarSlineAPI.Controllers
                                 FechaHoraAsignacionTecnico = t.FechaHoraAsignacionTecnico,
                                 FechaHoraInicio = t.FechaHoraInicio,
                                 FechaHoraTermino = t.FechaHoraTermino,
-                                IncidenciasServicio = t.IncidenciasServicio,
+                                IndicacionesTrabajo = t.IndicacionesTrabajo,
                                 ComentariosTecnico = t.ComentariosTecnico,
                                 ComentariosJefeTaller = t.ComentariosJefeTaller,
                                 EstadoTrabajo = t.EstadoTrabajo,
@@ -247,7 +247,7 @@ namespace CarSlineAPI.Controllers
 
                 trabajo.TecnicoAsignadoId = request.TecnicoId;
                 trabajo.FechaHoraAsignacionTecnico = DateTime.Now;
-
+                trabajo.EstadoTrabajo = 2; // Trabajo  Asignado a tecnico
                 await _db.SaveChangesAsync();
 
                 _logger.LogInformation($"Técnico {request.TecnicoId} asignado a trabajo {request.TrabajoId}");
@@ -279,9 +279,11 @@ namespace CarSlineAPI.Controllers
             int trabajoId,
             [FromHeader(Name = "X-User-Id")] int tecnicoId)
         {
+
             try
             {
                 var trabajo = await _db.Set<TrabajoPorOrden>().FindAsync(trabajoId);
+
 
                 if (trabajo == null || !trabajo.Activo)
                     return NotFound(new TrabajoResponse
@@ -297,14 +299,14 @@ namespace CarSlineAPI.Controllers
                         Message = "No estás asignado a este trabajo"
                     });
 
-                if (trabajo.EstadoTrabajo != 1)
+                if (trabajo.EstadoTrabajo > 2)
                     return BadRequest(new TrabajoResponse
                     {
                         Success = false,
                         Message = "El trabajo ya fue iniciado"
                     });
 
-                trabajo.EstadoTrabajo = 2; // En Proceso
+                trabajo.EstadoTrabajo = 3; // En Proceso
                 trabajo.FechaHoraInicio = DateTime.Now;
 
                 await _db.SaveChangesAsync();
@@ -357,14 +359,14 @@ namespace CarSlineAPI.Controllers
                         Message = "No estás asignado a este trabajo"
                     });
 
-                if (trabajo.EstadoTrabajo != 2)
+                if (trabajo.EstadoTrabajo != 3)
                     return BadRequest(new TrabajoResponse
                     {
                         Success = false,
                         Message = "El trabajo no está en proceso"
                     });
 
-                trabajo.EstadoTrabajo = 3; // Completado
+                trabajo.EstadoTrabajo = 4; // Completado
                 trabajo.FechaHoraTermino = DateTime.Now;
                 trabajo.ComentariosTecnico = comentarios;
 
@@ -424,7 +426,7 @@ namespace CarSlineAPI.Controllers
                         FechaHoraAsignacionTecnico = t.FechaHoraAsignacionTecnico,
                         FechaHoraInicio = t.FechaHoraInicio,
                         FechaHoraTermino = t.FechaHoraTermino,
-                        IncidenciasServicio = t.IncidenciasServicio,
+                        IndicacionesTrabajo = t.IndicacionesTrabajo,
                         ComentariosTecnico = t.ComentariosTecnico,
                         EstadoTrabajo = t.EstadoTrabajo,
                         EstadoTrabajoNombre = t.EstadoTrabajoNavegacion != null ? t.EstadoTrabajoNavegacion.NombreEstado : null,

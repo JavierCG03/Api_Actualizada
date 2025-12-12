@@ -100,13 +100,14 @@ namespace CarSlineAPI.Controllers
                     await _db.SaveChangesAsync();
 
                     // 3. Crear trabajos asociados
-                    foreach (var trabajoDescripcion in request.Trabajos)
+                    foreach (var t in request.Trabajos)
                     {
                         var trabajo = new TrabajoPorOrden
                         {
                             OrdenGeneralId = ordenGeneral.Id,
-                            Trabajo = trabajoDescripcion,
-                            EstadoTrabajo = 1, // Pendiente
+                            Trabajo = t.Trabajo,
+                            IndicacionesTrabajo = string.IsNullOrWhiteSpace(t.Indicaciones) ? null : t.Indicaciones,
+                            EstadoTrabajo = 1,
                             Activo = true,
                             FechaCreacion = DateTime.Now
                         };
@@ -165,7 +166,7 @@ namespace CarSlineAPI.Controllers
                         TipoOrdenId = o.TipoOrdenId,
                         ClienteNombre = o.Cliente.NombreCompleto,
                         ClienteTelefono = o.Cliente.TelefonoMovil,
-                        VehiculoCompleto = $"{o.Vehiculo.Marca} {o.Vehiculo.Modelo} {o.Vehiculo.Anio}",
+                        VehiculoCompleto = $"{o.Vehiculo.Marca} {o.Vehiculo.Modelo} {o.Vehiculo.Color} / {o.Vehiculo.Anio}",
                         VIN = o.Vehiculo.VIN,
                         Placas = o.Vehiculo.Placas ?? "",
                         FechaHoraPromesaEntrega = o.FechaHoraPromesaEntrega,
@@ -218,7 +219,7 @@ namespace CarSlineAPI.Controllers
                         TipoOrdenId = o.TipoOrdenId,
                         ClienteNombre = o.Cliente.NombreCompleto,
                         ClienteTelefono = o.Cliente.TelefonoMovil,
-                        VehiculoCompleto = $"{o.Vehiculo.Marca} {o.Vehiculo.Modelo} {o.Vehiculo.Anio}",
+                        VehiculoCompleto = $"{o.Vehiculo.Marca} {o.Vehiculo.Modelo} {o.Vehiculo.Color} / {o.Vehiculo.Anio}",
                         VIN = o.Vehiculo.VIN,
                         Placas = o.Vehiculo.Placas ?? "",
                         FechaHoraPromesaEntrega = o.FechaHoraPromesaEntrega,
@@ -275,7 +276,7 @@ namespace CarSlineAPI.Controllers
                         TipoOrdenId = o.TipoOrdenId,
                         ClienteNombre = o.Cliente.NombreCompleto,
                         ClienteTelefono = o.Cliente.TelefonoMovil,
-                        VehiculoCompleto = $"{o.Vehiculo.Marca} {o.Vehiculo.Modelo} {o.Vehiculo.Anio}",
+                        VehiculoCompleto = $"{o.Vehiculo.Marca} {o.Vehiculo.Modelo} {o.Vehiculo.Color} / {o.Vehiculo.Anio}",
                         VIN = o.Vehiculo.VIN,
                         Placas = o.Vehiculo.Placas ?? "",
                         AsesorNombre = o.Asesor.NombreCompleto,
@@ -299,7 +300,7 @@ namespace CarSlineAPI.Controllers
                                 FechaHoraAsignacionTecnico = t.FechaHoraAsignacionTecnico,
                                 FechaHoraInicio = t.FechaHoraInicio,
                                 FechaHoraTermino = t.FechaHoraTermino,
-                                IncidenciasServicio = t.IncidenciasServicio,
+                                IndicacionesTrabajo = t.IndicacionesTrabajo,
                                 ComentariosTecnico = t.ComentariosTecnico,
                                 ComentariosJefeTaller = t.ComentariosJefeTaller,
                                 EstadoTrabajo = t.EstadoTrabajo,
