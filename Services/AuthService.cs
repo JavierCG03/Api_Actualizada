@@ -14,6 +14,8 @@ namespace CarSlineAPI.Services
         Task<CrearUsuarioResponse> CrearUsuario(CrearUsuarioRequest request, int adminId);
         Task<List<RolDto>> ObtenerRolesDisponibles();
         Task<List<UsuarioDto>> ObtenerTodosLosUsuarios(int adminId);
+        Task<List<UsuarioDto>> ObtenerUsuariosPorRol(int rolId);
+
     }
 
     /// <summary>
@@ -272,6 +274,37 @@ namespace CarSlineAPI.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error al obtener usuarios por Admin ID: {adminId}");
+                return new List<UsuarioDto>();
+            }
+        }
+
+        public async Task<List<UsuarioDto>> ObtenerUsuariosPorRol(int RolId)
+        {
+            try
+            {
+                // Obtener todos los usuarios con sus roles
+                var usuarios = await _context.Usuarios
+                    .Include(u => u.Rol)
+                    .Where(u => u.Activo && u.RolId == RolId)
+                    .Select(u => new UsuarioDto
+                    {
+                        Id = u.Id,
+                        NombreCompleto = u.NombreCompleto,
+                        NombreUsuario = u.NombreUsuario,
+                        RolId = u.RolId,
+                        NombreRol = u.Rol != null ? u.Rol.NombreRol : "",
+                        DescripcionRol = u.Rol != null ? u.Rol.Descripcion : "",
+                        FechaCreacion = u.FechaCreacion,
+                        UltimoAcceso = u.UltimoAcceso
+                    })
+                    .OrderByDescending(u => u.FechaCreacion)
+                    .ToListAsync();
+
+                return usuarios;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al obtener usuarios ");
                 return new List<UsuarioDto>();
             }
         }

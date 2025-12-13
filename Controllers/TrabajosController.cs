@@ -222,53 +222,208 @@ namespace CarSlineAPI.Controllers
         /// Asignar técnico a un trabajo
         /// PUT api/Trabajos/asignar-tecnico
         /// </summary>
-        [HttpPut("asignar-tecnico")]
-        [ProducesResponseType(typeof(TrabajoResponse), StatusCodes.Status200OK)]
-        public async Task<IActionResult> AsignarTecnico([FromBody] AsignarTecnicoTrabajoRequest request)
+        // En tu TrabajosController.cs
+
+        [HttpPut("{trabajoId}/asignar-tecnico/{tecnicoId}")]
+        [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> AsignarTecnico(
+            int trabajoId,
+            int tecnicoId,
+            [FromHeader(Name = "X-User-Id")] int jefeId)
         {
             try
             {
-                var trabajo = await _db.Set<TrabajoPorOrden>().FindAsync(request.TrabajoId);
+                // Validar que el usuario que hace la petición es Jefe de Taller
+                var jefe = await _db.Usuarios.FindAsync(jefeId);
+                if (jefe == null || !jefe.Activo || jefe.RolId != 3) // RolId 3 = Jefe de Taller
+                {
+                    return Unauthorized(new AuthResponse
+                    {
+                        Success = false,
+                        Message = "No tienes permisos para asignar técnicos"
+                    });
+                }
+
+                // Buscar el trabajo
+                var trabajo = await _db.Set<TrabajoPorOrden>()
+                    .Include(t => t.OrdenGeneral)
+                    .FirstOrDefaultAsync(t => t.Id == trabajoId);
 
                 if (trabajo == null || !trabajo.Activo)
-                    return NotFound(new TrabajoResponse
+                {
+                    return NotFound(new AuthResponse
                     {
                         Success = false,
                         Message = "Trabajo no encontrado"
                     });
+                }
 
-                var tecnico = await _db.Usuarios.FindAsync(request.TecnicoId);
-                if (tecnico == null || !tecnico.Activo || tecnico.RolId != 5)
-                    return BadRequest(new TrabajoResponse
+                // Validar que el trabajo esté en estado Pendiente (1)
+                if (trabajo.EstadoTrabajo != 1)
+                {
+                    return BadRequest(new AuthResponse
                     {
                         Success = false,
-                        Message = "Técnico no válido"
+                        Message = "Solo se pueden asignar trabajos en estado pendiente"
                     });
+                }
 
-                trabajo.TecnicoAsignadoId = request.TecnicoId;
+                // Validar que el trabajo no tenga técnico asignado
+                if (trabajo.TecnicoAsignadoId.HasValue)
+                {
+                    return BadRequest(new AuthResponse
+                    {
+                        Success = false,
+                        Message = "Este trabajo ya tiene un técnico asignado. Use reasignar si desea cambiarlo."
+                    });
+                }
+
+                // Buscar y validar el técnico
+                var tecnico = await _db.Usuarios.FindAsync(tecnicoId);
+                if (tecnico == null || !tecnico.Activo || tecnico.RolId != 5)
+                {
+                    return BadRequest(new AuthResponse
+                    {
+                        Success = false,
+                        Message = "Técnico no válido o no encontrado"
+                    });
+                }
+
+                // Asignar técnico
+                trabajo.TecnicoAsignadoId = tecnicoId;
                 trabajo.FechaHoraAsignacionTecnico = DateTime.Now;
-                trabajo.EstadoTrabajo = 2; // Trabajo  Asignado a tecnico
+                trabajo.EstadoTrabajo = 2; // Asignado
+
                 await _db.SaveChangesAsync();
 
-                _logger.LogInformation($"Técnico {request.TecnicoId} asignado a trabajo {request.TrabajoId}");
+                _logger.LogInformation(
+                    $"Jefe {jefeId} asignó técnico {tecnicoId} ({tecnico.NombreCompleto}) al trabajo {trabajoId} de la orden {trabajo.OrdenGeneralId}");
 
-                return Ok(new TrabajoResponse
+                return Ok(new AuthResponse
                 {
                     Success = true,
-                    Message = "Técnico asignado exitosamente"
+                    Message = $"Técnico {tecnico.NombreCompleto} asignado exitosamente"
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al asignar técnico");
-                return StatusCode(500, new TrabajoResponse
+                _logger.LogError(ex, $"Error al asignar técnico {tecnicoId} al trabajo {trabajoId}");
+                return StatusCode(500, new AuthResponse
                 {
                     Success = false,
-                    Message = "Error al asignar técnico"
+                    Message = "Error interno al asignar técnico"
                 });
             }
         }
 
+        [HttpPut("{trabajoId}/reasignar-tecnico/{nuevoTecnicoId}")]
+        [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ReasignarTecnico(
+            int trabajoId,
+            int nuevoTecnicoId,
+            [FromHeader(Name = "X-User-Id")] int jefeId)
+        {
+            try
+            {
+                // Validar que el usuario que hace la petición es Jefe de Taller
+                var jefe = await _db.Usuarios.FindAsync(jefeId);
+                if (jefe == null || !jefe.Activo || jefe.RolId != 3)
+                {
+                    return Unauthorized(new AuthResponse
+                    {
+                        Success = false,
+                        Message = "No tienes permisos para reasignar técnicos"
+                    });
+                }
+
+                // Buscar el trabajo
+                var trabajo = await _db.Set<TrabajoPorOrden>()
+                    .Include(t => t.OrdenGeneral)
+                    .Include(t => t.TecnicoAsignado)
+                    .FirstOrDefaultAsync(t => t.Id == trabajoId);
+
+                if (trabajo == null || !trabajo.Activo)
+                {
+                    return NotFound(new AuthResponse
+                    {
+                        Success = false,
+                        Message = "Trabajo no encontrado"
+                    });
+                }
+
+                // Validar que el trabajo tenga técnico asignado
+                if (!trabajo.TecnicoAsignadoId.HasValue)
+                {
+                    return BadRequest(new AuthResponse
+                    {
+                        Success = false,
+                        Message = "Este trabajo no tiene técnico asignado. Use asignar en su lugar."
+                    });
+                }
+
+                // Validar que el trabajo NO esté en proceso (3), completado (4), pausado (5) o cancelado (6)
+                if (trabajo.EstadoTrabajo == 3 || trabajo.EstadoTrabajo >= 4)
+                {
+                    return BadRequest(new AuthResponse
+                    {
+                        Success = false,
+                        Message = "No se puede reasignar un trabajo que ya está en proceso, completado, pausado o cancelado"
+                    });
+                }
+
+                // Validar que el nuevo técnico sea diferente al actual
+                if (trabajo.TecnicoAsignadoId == nuevoTecnicoId)
+                {
+                    return BadRequest(new AuthResponse
+                    {
+                        Success = false,
+                        Message = "El técnico seleccionado ya está asignado a este trabajo"
+                    });
+                }
+
+                // Buscar y validar el nuevo técnico
+                var nuevoTecnico = await _db.Usuarios.FindAsync(nuevoTecnicoId);
+                if (nuevoTecnico == null || !nuevoTecnico.Activo || nuevoTecnico.RolId != 5)
+                {
+                    return BadRequest(new AuthResponse
+                    {
+                        Success = false,
+                        Message = "Técnico no válido o no encontrado"
+                    });
+                }
+
+                // Guardar el técnico anterior para el log
+                string tecnicoAnterior = trabajo.TecnicoAsignado?.NombreCompleto ?? "Desconocido";
+
+                // Reasignar técnico
+                trabajo.TecnicoAsignadoId = nuevoTecnicoId;
+                trabajo.FechaHoraAsignacionTecnico = DateTime.Now;
+                trabajo.EstadoTrabajo = 2; // Asignado
+
+                // Limpiar fechas de inicio si existían (porque cambia de técnico)
+                trabajo.FechaHoraInicio = null;
+
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    $"Jefe {jefeId} reasignó trabajo {trabajoId} de {tecnicoAnterior} a {nuevoTecnico.NombreCompleto}");
+
+                return Ok(new AuthResponse
+                {
+                    Success = true,
+                    Message = $"Trabajo reasignado a {nuevoTecnico.NombreCompleto}"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al reasignar técnico en trabajo {trabajoId}");
+                return StatusCode(500, new AuthResponse
+                {
+                    Success = false,
+                    Message = "Error interno al reasignar técnico"
+                });
+            }
+        }
         /// <summary>
         /// Iniciar trabajo (técnico comienza a trabajar)
         /// PUT api/Trabajos/iniciar/{trabajoId}
