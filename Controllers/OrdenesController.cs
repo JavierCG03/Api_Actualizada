@@ -26,6 +26,7 @@ namespace CarSlineAPI.Controllers
         /// ✅ NUEVO: Crear orden con lista de trabajos
         /// POST api/Ordenes/crear-con-trabajos
         /// </summary>
+        
         [HttpPost("crear-con-trabajos")]
         public async Task<IActionResult> CrearOrdenConTrabajos(
             [FromBody] CrearOrdenConTrabajosRequest request,
@@ -367,6 +368,7 @@ namespace CarSlineAPI.Controllers
         /// Entregar orden (solo si todos los trabajos están completados)
         /// PUT api/Ordenes/entregar/{ordenId}
         /// </summary>
+        
         [HttpPut("entregar/{ordenId}")]
         public async Task<IActionResult> EntregarOrden(int ordenId)
         {

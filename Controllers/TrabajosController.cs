@@ -550,6 +550,7 @@ namespace CarSlineAPI.Controllers
         /// Obtener trabajos asignados a un técnico
         /// GET api/Trabajos/mis-trabajos
         /// </summary>
+  
         [HttpGet("mis-trabajos")]
         [ProducesResponseType(typeof(List<TrabajoDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> ObtenerMisTrabajos(
