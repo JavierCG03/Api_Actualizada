@@ -20,18 +20,102 @@ namespace CarSlineAPI.Controllers
         }
 
         /// <summary>
-        /// Obtener todas las refacciones activas
+        /// ✅ NUEVO: Obtener refacciones CON PAGINACIÓN Y BÚSQUEDA
+        /// GET api/Refacciones/paginado?pagina=1&porPagina=10&busqueda=filtro
         /// </summary>
-        [HttpGet]
-        [ProducesResponseType(typeof(List<RefaccionDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> ObtenerRefacciones()
+        [HttpGet("paginado")]
+        [ProducesResponseType(typeof(RefaccionesPaginadasResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ObtenerRefaccionesPaginadas(
+            [FromQuery] int pagina = 1,
+            [FromQuery] int porPagina = 10,
+            [FromQuery] string? busqueda = null)
         {
             try
             {
+                // Validar parámetros
+                pagina = Math.Max(1, pagina);
+                porPagina = Math.Clamp(porPagina, 5, 50); // Entre 5 y 50 items
+
+                var query = _db.Refacciones.Where(r => r.Activo);
+
+                // ✅ Aplicar búsqueda si existe
+                if (!string.IsNullOrWhiteSpace(busqueda))
+                {
+                    var busquedaUpper = busqueda.ToUpper();
+                    query = query.Where(r =>
+                        r.NumeroParte.ToUpper().Contains(busquedaUpper) ||
+                        r.TipoRefaccion.ToUpper().Contains(busquedaUpper) ||
+                        (r.MarcaVehiculo != null && r.MarcaVehiculo.ToUpper().Contains(busquedaUpper)) ||
+                        (r.Modelo != null && r.Modelo.ToUpper().Contains(busquedaUpper))
+                    );
+                }
+
+                // ✅ Contar total ANTES de paginar
+                var totalItems = await query.CountAsync();
+                var totalPaginas = (int)Math.Ceiling(totalItems / (double)porPagina);
+
+                // ✅ Obtener solo la página solicitada
+                var refacciones = await query
+                    .OrderByDescending(r => r.FechaUltimaModificacion) // Más recientes primero
+                    .Skip((pagina - 1) * porPagina)
+                    .Take(porPagina)
+                    .Select(r => new RefaccionDto
+                    {
+                        Id = r.Id,
+                        NumeroParte = r.NumeroParte,
+                        TipoRefaccion = r.TipoRefaccion,
+                        MarcaVehiculo = r.MarcaVehiculo,
+                        Modelo = r.Modelo,
+                        Anio = r.Anio,
+                        Cantidad = r.Cantidad,
+                        FechaRegistro = r.FechaRegistro,
+                        FechaUltimaModificacion = r.FechaUltimaModificacion
+                    })
+                    .ToListAsync();
+
+                return Ok(new RefaccionesPaginadasResponse
+                {
+                    Success = true,
+                    Refacciones = refacciones,
+                    PaginaActual = pagina,
+                    TotalPaginas = totalPaginas,
+                    TotalItems = totalItems,
+                    PorPagina = porPagina,
+                    TienePaginaAnterior = pagina > 1,
+                    TienePaginaSiguiente = pagina < totalPaginas
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener refacciones paginadas");
+                return StatusCode(500, new { Message = "Error al obtener refacciones" });
+            }
+        }
+
+        /// <summary>
+        /// ✅ BÚSQUEDA RÁPIDA - Solo para autocompletado
+        /// GET api/Refacciones/buscar-rapido?termino=filtro
+        /// </summary>
+        [HttpGet("buscar-rapido")]
+        [ProducesResponseType(typeof(List<RefaccionDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> BusquedaRapida([FromQuery] string termino)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(termino) || termino.Length < 2)
+                {
+                    return Ok(new List<RefaccionDto>());
+                }
+
+                var terminoUpper = termino.ToUpper();
+
                 var refacciones = await _db.Refacciones
-                    .Where(r => r.Activo)
-                    .OrderBy(r => r.TipoRefaccion)
-                    .ThenBy(r => r.NumeroParte)
+                    .Where(r => r.Activo && (
+                        r.NumeroParte.ToUpper().Contains(terminoUpper) ||
+                        r.TipoRefaccion.ToUpper().Contains(terminoUpper)
+                    ))
+                    .OrderBy(r => r.NumeroParte)
+                    .Take(15) // Solo 15 resultados máximo
                     .Select(r => new RefaccionDto
                     {
                         Id = r.Id,
@@ -50,13 +134,13 @@ namespace CarSlineAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener refacciones");
-                return StatusCode(500, new { Message = "Error al obtener refacciones" });
+                _logger.LogError(ex, "Error en búsqueda rápida");
+                return Ok(new List<RefaccionDto>());
             }
         }
 
         /// <summary>
-        /// Buscar refacción por número de parte
+        /// Buscar refacción por número de parte (EXACTO)
         /// </summary>
         [HttpGet("buscar/{numeroParte}")]
         [ProducesResponseType(typeof(RefaccionDto), StatusCodes.Status200OK)]
@@ -110,7 +194,6 @@ namespace CarSlineAPI.Controllers
 
             try
             {
-                // Verificar si ya existe
                 var existe = await _db.Refacciones
                     .AnyAsync(r => r.NumeroParte == request.NumeroParte.ToUpper());
 
@@ -301,7 +384,7 @@ namespace CarSlineAPI.Controllers
         }
 
         /// <summary>
-        /// Eliminar refacción (borrado lógico)
+        /// Eliminar refacción (borrado físico)
         /// </summary>
         [HttpDelete("{id}")]
         [ProducesResponseType(typeof(RefaccionResponse), StatusCodes.Status200OK)]
@@ -319,13 +402,7 @@ namespace CarSlineAPI.Controllers
                         Message = "Refacción no encontrada"
                     });
 
-                // Eliminar físicamente la fila
                 _db.Refacciones.Remove(refaccion);
-                await _db.SaveChangesAsync();
-
-                //refaccion.Activo = false;
-                //refaccion.FechaUltimaModificacion = DateTime.Now;
-
                 await _db.SaveChangesAsync();
 
                 _logger.LogInformation($"Refacción eliminada: {refaccion.NumeroParte}");

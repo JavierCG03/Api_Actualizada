@@ -64,4 +64,16 @@ namespace CarSlineAPI.Models.DTOs
         public string Message { get; set; } = string.Empty;
         public RefaccionDto? Refaccion { get; set; }
     }
+    // ✅ NUEVO DTO para respuesta paginada
+    public class RefaccionesPaginadasResponse
+    {
+        public bool Success { get; set; }
+        public List<RefaccionDto> Refacciones { get; set; } = new();
+        public int PaginaActual { get; set; }
+        public int TotalPaginas { get; set; }
+        public int TotalItems { get; set; }
+        public int PorPagina { get; set; }
+        public bool TienePaginaAnterior { get; set; }
+        public bool TienePaginaSiguiente { get; set; }
+    }
 }

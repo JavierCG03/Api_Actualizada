@@ -167,4 +167,71 @@ namespace CarSlineAPI.Models.DTOs
         public string Message { get; set; } = string.Empty;
         public TrabajoDto? Trabajo { get; set; }
     }
+
+    // DTO específico para "Mis Trabajos"
+    public class MiTrabajoDto
+    {
+        public int Id { get; set; }
+        public int OrdenGeneralId { get; set; }
+        public string NumeroOrden { get; set; } = string.Empty;
+        public string Trabajo { get; set; } = string.Empty;
+
+        // Vehículo
+        public string VehiculoCompleto { get; set; } = string.Empty;
+        public string VIN { get; set; } = string.Empty;
+        public string Placas { get; set; } = string.Empty;
+
+        // Trabajo
+        public DateTime? FechaHoraAsignacionTecnico { get; set; }
+        public DateTime? FechaHoraInicio { get; set; }
+        public DateTime? FechaHoraTermino { get; set; }
+        public string? IndicacionesTrabajo { get; set; }
+        public string? ComentariosTecnico { get; set; }
+
+        // Estado
+        public int EstadoTrabajo { get; set; }
+        public string? EstadoTrabajoNombre { get; set; }
+        public string? ColorEstado { get; set; }
+
+        // Fechas
+        public DateTime FechaCreacion { get; set; }
+        public DateTime FechaPromesaEntrega { get; set; }
+
+        // Propiedades calculadas
+        public bool EsPendiente => EstadoTrabajo == 1;
+        public bool EstaAsignado => EstadoTrabajo == 2;
+        public bool EnProceso => EstadoTrabajo == 3;
+        public bool EstaCompletado => EstadoTrabajo == 4;
+        public bool EstaPausado => EstadoTrabajo == 5;
+        public bool EstaCancelado => EstadoTrabajo == 6;
+
+        public string DuracionFormateada
+        {
+            get
+            {
+                if (!FechaHoraInicio.HasValue || !FechaHoraTermino.HasValue)
+                    return "-";
+
+                var duracion = FechaHoraTermino.Value - FechaHoraInicio.Value;
+                return $"{duracion.Hours}h {duracion.Minutes}m";
+            }
+        }
+
+        public string TiempoTranscurrido
+        {
+            get
+            {
+                if (!FechaHoraInicio.HasValue)
+                    return "-";
+
+                var fechaFin = FechaHoraTermino ?? DateTime.Now;
+                var duracion = fechaFin - FechaHoraInicio.Value;
+
+                if (duracion.TotalHours >= 1)
+                    return $"{(int)duracion.TotalHours}h {duracion.Minutes}m";
+                else
+                    return $"{duracion.Minutes}m";
+            }
+        }
+    }
 }

@@ -548,17 +548,28 @@ namespace CarSlineAPI.Controllers
 
         /// <summary>
         /// Obtener trabajos asignados a un técnico
-        /// GET api/Trabajos/mis-trabajos
+        /// GET api/Trabajos/mis-trabajos/{tecnicoId}?estadoFiltro=2
         /// </summary>
-  
-        [HttpGet("mis-trabajos")]
-        [ProducesResponseType(typeof(List<TrabajoDto>), StatusCodes.Status200OK)]
+        [HttpGet("mis-trabajos/{tecnicoId}")]
+        [ProducesResponseType(typeof(List<MiTrabajoDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> ObtenerMisTrabajos(
-            [FromHeader(Name = "X-User-Id")] int tecnicoId,
+            int tecnicoId,
             [FromQuery] int? estadoFiltro = null)
         {
             try
             {
+                // Verificar que el técnico existe y está activo
+                var tecnico = await _db.Usuarios.FindAsync(tecnicoId);
+                if (tecnico == null || !tecnico.Activo || tecnico.RolId != 5) // RolId 5 = Técnico
+                {
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Técnico no encontrado o no activo"
+                    });
+                }
+
                 var query = _db.Set<TrabajoPorOrden>()
                     .Include(t => t.OrdenGeneral)
                         .ThenInclude(o => o.Cliente)
@@ -567,37 +578,73 @@ namespace CarSlineAPI.Controllers
                     .Include(t => t.EstadoTrabajoNavegacion)
                     .Where(t => t.TecnicoAsignadoId == tecnicoId && t.Activo);
 
+                // Aplicar filtro de estado si se proporciona
                 if (estadoFiltro.HasValue)
+                {
                     query = query.Where(t => t.EstadoTrabajo == estadoFiltro.Value);
+                }
 
                 var trabajos = await query
                     .OrderBy(t => t.EstadoTrabajo)
                     .ThenBy(t => t.FechaCreacion)
-                    .Select(t => new TrabajoDto
+                    .Select(t => new MiTrabajoDto
                     {
                         Id = t.Id,
                         OrdenGeneralId = t.OrdenGeneralId,
+                        NumeroOrden = t.OrdenGeneral.NumeroOrden,
                         Trabajo = t.Trabajo,
-                        TecnicoAsignadoId = t.TecnicoAsignadoId,
+
+                        // Información del Vehículo
+                        VehiculoCompleto = $"{t.OrdenGeneral.Vehiculo.Marca} {t.OrdenGeneral.Vehiculo.Modelo} {t.OrdenGeneral.Vehiculo.Color} / {t.OrdenGeneral.Vehiculo.Anio}",
+                        VIN = t.OrdenGeneral.Vehiculo.VIN,
+                        Placas = t.OrdenGeneral.Vehiculo.Placas ?? "",
+
+                        // Información del Trabajo
                         FechaHoraAsignacionTecnico = t.FechaHoraAsignacionTecnico,
                         FechaHoraInicio = t.FechaHoraInicio,
                         FechaHoraTermino = t.FechaHoraTermino,
                         IndicacionesTrabajo = t.IndicacionesTrabajo,
                         ComentariosTecnico = t.ComentariosTecnico,
+
+                        // Estado
                         EstadoTrabajo = t.EstadoTrabajo,
                         EstadoTrabajoNombre = t.EstadoTrabajoNavegacion != null ? t.EstadoTrabajoNavegacion.NombreEstado : null,
                         ColorEstado = t.EstadoTrabajoNavegacion != null ? t.EstadoTrabajoNavegacion.Color : null,
-                        FechaCreacion = t.FechaCreacion
+
+                        // Fechas de la Orden
+                        FechaCreacion = t.FechaCreacion,
+                        FechaPromesaEntrega = t.OrdenGeneral.FechaHoraPromesaEntrega
                     })
                     .ToListAsync();
 
-                return Ok(trabajos);
+                // Respuesta con información adicional
+                var response = new
+                {
+                    Success = true,
+                    Message = estadoFiltro.HasValue
+                        ? $"Se encontraron {trabajos.Count} trabajo(s) con estado {estadoFiltro.Value}"
+                        : $"Se encontraron {trabajos.Count} trabajo(s) total(es)",
+                    TecnicoId = tecnicoId,
+                    TecnicoNombre = tecnico.NombreCompleto,
+                    FiltroEstado = estadoFiltro,
+                    TotalTrabajos = trabajos.Count,
+                    Trabajos = trabajos
+                };
+
+                _logger.LogInformation($"Consulta exitosa: Técnico {tecnicoId} - {trabajos.Count} trabajos");
+
+                return Ok(response);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error al obtener trabajos del técnico {tecnicoId}");
-                return StatusCode(500, new { Message = "Error al obtener trabajos" });
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "Error al obtener trabajos"
+                });
             }
         }
+
     }
 }
