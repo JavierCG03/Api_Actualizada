@@ -582,6 +582,13 @@ namespace CarSlineAPI.Controllers
                 if (estadoFiltro.HasValue)
                 {
                     query = query.Where(t => t.EstadoTrabajo == estadoFiltro.Value);
+
+                    if (estadoFiltro == 4)
+                    {
+                        var hoy = DateTime.Today;
+                        query = query.Where(t => t.FechaHoraTermino.HasValue &&
+                                                 t.FechaHoraTermino.Value.Date == hoy);
+                    }
                 }
 
                 var trabajos = await query
@@ -591,6 +598,7 @@ namespace CarSlineAPI.Controllers
                     {
                         Id = t.Id,
                         OrdenGeneralId = t.OrdenGeneralId,
+                        TipoOrden = t.OrdenGeneral.TipoOrdenId,
                         NumeroOrden = t.OrdenGeneral.NumeroOrden,
                         Trabajo = t.Trabajo,
 
@@ -609,7 +617,6 @@ namespace CarSlineAPI.Controllers
                         // Estado
                         EstadoTrabajo = t.EstadoTrabajo,
                         EstadoTrabajoNombre = t.EstadoTrabajoNavegacion != null ? t.EstadoTrabajoNavegacion.NombreEstado : null,
-                        ColorEstado = t.EstadoTrabajoNavegacion != null ? t.EstadoTrabajoNavegacion.Color : null,
 
                         // Fechas de la Orden
                         FechaCreacion = t.FechaCreacion,
@@ -620,14 +627,7 @@ namespace CarSlineAPI.Controllers
                 // Respuesta con información adicional
                 var response = new
                 {
-                    Success = true,
-                    Message = estadoFiltro.HasValue
-                        ? $"Se encontraron {trabajos.Count} trabajo(s) con estado {estadoFiltro.Value}"
-                        : $"Se encontraron {trabajos.Count} trabajo(s) total(es)",
-                    TecnicoId = tecnicoId,
-                    TecnicoNombre = tecnico.NombreCompleto,
-                    FiltroEstado = estadoFiltro,
-                    TotalTrabajos = trabajos.Count,
+
                     Trabajos = trabajos
                 };
 

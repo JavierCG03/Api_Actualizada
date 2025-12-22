@@ -174,6 +174,7 @@ namespace CarSlineAPI.Models.DTOs
         public int Id { get; set; }
         public int OrdenGeneralId { get; set; }
         public string NumeroOrden { get; set; } = string.Empty;
+        public int TipoOrden { get; set; }
         public string Trabajo { get; set; } = string.Empty;
 
         // Vehículo
@@ -191,7 +192,6 @@ namespace CarSlineAPI.Models.DTOs
         // Estado
         public int EstadoTrabajo { get; set; }
         public string? EstadoTrabajoNombre { get; set; }
-        public string? ColorEstado { get; set; }
 
         // Fechas
         public DateTime FechaCreacion { get; set; }

@@ -19,6 +19,29 @@ namespace CarSlineAPI.Controllers
             _logger = logger;
         }
 
+        [HttpGet("todos")]
+        public async Task<IActionResult> ObtenerTodas()
+        {
+            var refacciones = await _db.Refacciones
+                .Where(r => r.Activo)
+                .OrderByDescending(r => r.FechaUltimaModificacion)
+                .Select(r => new RefaccionDto
+                {
+                    Id = r.Id,
+                    NumeroParte = r.NumeroParte,
+                    TipoRefaccion = r.TipoRefaccion,
+                    MarcaVehiculo = r.MarcaVehiculo,
+                    Modelo = r.Modelo,
+                    Anio = r.Anio,
+                    Cantidad = r.Cantidad,
+                    FechaRegistro = r.FechaRegistro,
+                    FechaUltimaModificacion = r.FechaUltimaModificacion
+                })
+                .ToListAsync();
+
+            return Ok(refacciones);
+        }
+
         /// <summary>
         /// ✅ NUEVO: Obtener refacciones CON PAGINACIÓN Y BÚSQUEDA
         /// GET api/Refacciones/paginado?pagina=1&porPagina=10&busqueda=filtro
