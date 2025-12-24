@@ -168,7 +168,8 @@ namespace CarSlineAPI.Models.DTOs
         public TrabajoDto? Trabajo { get; set; }
     }
 
-    // DTO específico para "Mis Trabajos"
+    // DTO específ
+    // ico para "Mis Trabajos"
     public class MiTrabajoDto
     {
         public int Id { get; set; }
@@ -204,6 +205,7 @@ namespace CarSlineAPI.Models.DTOs
         public bool EstaCompletado => EstadoTrabajo == 4;
         public bool EstaPausado => EstadoTrabajo == 5;
         public bool EstaCancelado => EstadoTrabajo == 6;
+
 
         public string DuracionFormateada
         {
