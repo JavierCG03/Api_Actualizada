@@ -344,6 +344,162 @@ namespace CarSlineAPI.Models.Entities
 
         public int? Orden { get; set; }
     }
+
+    [Table("checklistservicios")]
+    public class CheckListServicio
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int TrabajoId { get; set; }
+
+        [Required]
+        public int OrdenGeneralId { get; set; }
+
+        [Required]
+        [Column(TypeName = "TEXT")]
+        public string Trabajo { get; set; } = string.Empty;
+
+        // Sistema de Dirección
+        [Required]
+        [MaxLength(15)]
+        public string Bieletas { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string Terminales { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string CajaDireccion { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string Volante { get; set; } = string.Empty;
+
+        // Sistema de Suspensión
+        [Required]
+        [MaxLength(15)]
+        public string AmortiguadoresDelanteros { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string AmortiguadoresTraseros { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string BarraEstabilizadora { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string Horquillas { get; set; } = string.Empty;
+
+        // Neumáticos
+        [Required]
+        [MaxLength(15)]
+        public string NeumaticosDelanteros { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string NeumaticosTraseros { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string Balanceo { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string Alineacion { get; set; } = string.Empty;
+
+        // Luces
+        [Required]
+        [MaxLength(15)]
+        public string LucesAltas { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string LucesBajas { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string LucesAntiniebla { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string LucesReversa { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string LucesDireccionales { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string LucesIntermitentes { get; set; } = string.Empty;
+
+        // Sistema de Frenos
+        [Required]
+        [MaxLength(15)]
+        public string DiscosTamboresDelanteros { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string DiscosTamboresTraseros { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string BalatasDelanteras { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(15)]
+        public string BalatasTraseras { get; set; } = string.Empty;
+
+        // Piezas Reemplazadas
+        [Required]
+        public bool ReemplazoAceiteMotor { get; set; }
+
+        [Required]
+        public bool ReemplazoFiltroAceite { get; set; }
+
+        [Required]
+        public bool ReemplazoFiltroAireMotor { get; set; }
+
+        [Required]
+        public bool ReemplazoFiltroAirePolen { get; set; }
+
+        // Revisión de Niveles
+        [Required]
+        public bool NivelLiquidoFrenos { get; set; } = true;
+
+        [Required]
+        public bool NivelAnticongelante { get; set; } = true;
+
+        [Required]
+        public bool NivelDepositoLimpiaparabrisas { get; set; } = true;
+
+        [Required]
+        public bool NivelAceiteMotor { get; set; } = true;
+
+        // Trabajos Realizados
+        [Required]
+        public bool DescristalizacionTamboresDiscos { get; set; } = true;
+
+        [Required]
+        public bool AjusteFrenos { get; set; } = true;
+
+        [Required]
+        public bool CalibracionPresionNeumaticos { get; set; } = true;
+
+        [Required]
+        public bool TorqueNeumaticos { get; set; } = true;
+
+        // Navegación
+        [ForeignKey("TrabajoId")]
+        public virtual TrabajoPorOrden? TrabajoPorOrden { get; set; }
+
+        [ForeignKey("OrdenGeneralId")]
+        public virtual OrdenGeneral? OrdenGeneral { get; set; }
+    }
 }
 
 

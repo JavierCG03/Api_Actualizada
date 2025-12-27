@@ -23,6 +23,7 @@ namespace CarSlineAPI.Data
         public DbSet<OrdenGeneral> OrdenesGenerales { get; set; }
         public DbSet<HistorialServicio> HistorialServicios { get; set; }
         public DbSet<Refaccion> Refacciones { get; set; }
+        public DbSet<CheckListServicio> CheckListServicios { get; set; }
 
         // ✅ NUEVOS DbSets
         public DbSet<TrabajoPorOrden> TrabajosPorOrden { get; set; }
@@ -184,6 +185,31 @@ namespace CarSlineAPI.Data
 
                 entity.Property(e => e.FechaCreacion)
                     .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            });
+
+            // En el método OnModelCreating, después de las configuraciones existentes:
+
+            modelBuilder.Entity<CheckListServicio>(entity =>
+            {
+                entity.ToTable("checklistservicios");
+
+                entity.HasIndex(e => e.TrabajoId)
+                    .HasDatabaseName("IX_CheckList_Trabajo");
+
+                entity.HasIndex(e => e.OrdenGeneralId)
+                    .HasDatabaseName("IX_CheckList_OrdenGeneral");
+
+                // Relación con TrabajoPorOrden
+                entity.HasOne(e => e.TrabajoPorOrden)
+                    .WithMany()
+                    .HasForeignKey(e => e.TrabajoId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Relación con OrdenGeneral
+                entity.HasOne(e => e.OrdenGeneral)
+                    .WithMany()
+                    .HasForeignKey(e => e.OrdenGeneralId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }
