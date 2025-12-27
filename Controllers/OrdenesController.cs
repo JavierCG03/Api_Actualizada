@@ -382,8 +382,7 @@ namespace CarSlineAPI.Controllers
                     return NotFound(new { Success = false, Message = "Orden no encontrada" });
 
                 // Verificar que todos los trabajos estén completados
-                var trabajosPendientes = orden.Trabajos.Count(t => t.Activo && t.EstadoTrabajo != 3);
-
+                var trabajosPendientes = orden.Trabajos.Count(t => t.Activo && t.EstadoTrabajo != 4);
                 if (trabajosPendientes > 0)
                     return BadRequest(new
                     {
