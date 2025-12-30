@@ -254,6 +254,29 @@ namespace CarSlineAPI.Controllers
             }
         }
 
+
+        [HttpGet("Trabajos")]// Para obtener todas las ordenes generales 
+        public async Task<IActionResult> ObtenerTrabajosTecnicos()
+        {
+            try
+            {
+                var Trabajos = await _db.TrabajosPorOrden
+                    .Include(o => o.Trabajo)
+                    .Include(o => o.OrdenGeneral.FechaHoraPromesaEntrega)
+                    .Include(o => o.TecnicoAsignado.NombreCompleto)
+                    .Include(o => o.EstadoTrabajo)
+                    .Include(o => o.FechaHoraAsignacionTecnico)
+                    .Where(o => o.Activo && new[] { 2, 3, 4, 5 }.Contains(o.EstadoTrabajo))
+                    .OrderBy(o => o.FechaHoraPromesaEntrega);
+
+                return Ok(Trabajos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener órdenes");
+                return StatusCode(500, new { Message = "Error al obtener órdenes" });
+            }
+        }
         /// <summary>
         /// Obtener orden detallada con todos sus trabajos
         /// GET api/Ordenes/detalle/{ordenId}
