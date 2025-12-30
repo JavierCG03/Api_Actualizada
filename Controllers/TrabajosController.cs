@@ -362,7 +362,7 @@ namespace CarSlineAPI.Controllers
                 }
 
                 // Validar que el trabajo NO esté en proceso (3), completado (4), pausado (5) o cancelado (6)
-                if (trabajo.EstadoTrabajo == 3 || trabajo.EstadoTrabajo >= 4)
+                if (trabajo.EstadoTrabajo == 3 || trabajo.EstadoTrabajo == 4 || trabajo.EstadoTrabajo == 6)
                 {
                     return BadRequest(new AuthResponse
                     {
@@ -484,6 +484,156 @@ namespace CarSlineAPI.Controllers
                 });
             }
         }
+
+        [HttpPut("Pausar/{trabajoId}")]
+        [ProducesResponseType(typeof(TrabajoResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> PausarTrabajo(
+            int trabajoId,
+            [FromHeader(Name = "X-User-Id")] int tecnicoId,
+            [FromBody] string motivo)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(motivo))
+                {
+                    return BadRequest(new TrabajoResponse
+                    {
+                        Success = false,
+                        Message = "El motivo de la pausa es obligatorio"
+                    });
+                }
+
+                var trabajo = await _db.Set<TrabajoPorOrden>()
+                    .FirstOrDefaultAsync(t => t.Id == trabajoId && t.Activo);
+
+                if (trabajo == null)
+                    return NotFound(new TrabajoResponse
+                    {
+                        Success = false,
+                        Message = "Trabajo no encontrado"
+                    });
+
+                if (trabajo.TecnicoAsignadoId != tecnicoId)
+                    return Unauthorized(new TrabajoResponse
+                    {
+                        Success = false,
+                        Message = "No estás asignado a este trabajo"
+                    });
+
+                if (trabajo.EstadoTrabajo != 3)
+                    return BadRequest(new TrabajoResponse
+                    {
+                        Success = false,
+                        Message = "El trabajo no se puede pausar porque no está en proceso"
+                    });
+                
+                trabajo.EstadoTrabajo = 5; // Pausado
+              
+                var pausa = new pausatrabajo
+                {
+                    TrabajoId = trabajo.Id,
+                    OrdenGeneralId = trabajo.OrdenGeneralId,
+                    Motivo = motivo,
+                    FechaHoraPausa = DateTime.Now
+                };
+
+                _db.Set<pausatrabajo>().Add(pausa);
+
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation($"Trabajo {trabajoId} pausado por técnico {tecnicoId}");
+
+                return Ok(new TrabajoResponse
+                {
+                    Success = true,
+                    Message = "Trabajo pausado exitosamente"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al pausar trabajo");
+                return StatusCode(500, new TrabajoResponse
+                {
+                    Success = false,
+                    Message = "Error al pausar trabajo"
+                });
+            }
+        }
+
+
+        [HttpPut("Reanudar/{trabajoId}")]
+        [ProducesResponseType(typeof(TrabajoResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ReanudarTrabajo(
+            int trabajoId,
+            [FromHeader(Name = "X-User-Id")] int tecnicoId)
+        {
+            try
+            {
+                var trabajo = await _db.Set<TrabajoPorOrden>()
+                    .FirstOrDefaultAsync(t => t.Id == trabajoId && t.Activo);
+
+                if (trabajo == null)
+                    return NotFound(new TrabajoResponse
+                    {
+                        Success = false,
+                        Message = "Trabajo no encontrado"
+                    });
+
+                if (trabajo.TecnicoAsignadoId != tecnicoId)
+                    return Unauthorized(new TrabajoResponse
+                    {
+                        Success = false,
+                        Message = "No estás asignado a este trabajo"
+                    });
+
+                if (trabajo.EstadoTrabajo != 5) // Pausado
+                    return BadRequest(new TrabajoResponse
+                    {
+                        Success = false,
+                        Message = "El trabajo no se puede reanudar porque no está pausado"
+                    });
+
+                // 🔎 Buscar la última pausa activa (sin reanudación)
+                var pausaActiva = await _db.Set<pausatrabajo>()
+                    .Where(p => p.TrabajoId == trabajoId && p.FechaHoraReanudacion == null)
+                    .OrderByDescending(p => p.FechaHoraPausa)
+                    .FirstOrDefaultAsync();
+
+                if (pausaActiva == null)
+                    return BadRequest(new TrabajoResponse
+                    {
+                        Success = false,
+                        Message = "No existe una pausa activa para este trabajo"
+                    });
+
+                // 🟢 Cerrar la pausa
+                pausaActiva.FechaHoraReanudacion = DateTime.Now;
+
+                // 🔵 Cambiar estado del trabajo
+                trabajo.EstadoTrabajo = 3; // En proceso
+
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    $"Trabajo {trabajoId} reanudado por técnico {tecnicoId}. Pausa cerrada: {pausaActiva.Id}");
+
+                return Ok(new TrabajoResponse
+                {
+                    Success = true,
+                    Message = "Trabajo reanudado exitosamente"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al reanudar trabajo");
+                return StatusCode(500, new TrabajoResponse
+                {
+                    Success = false,
+                    Message = "Error al reanudar el trabajo"
+                });
+            }
+        }
+
 
         /// <summary>
         /// Completar trabajo

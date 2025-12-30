@@ -345,7 +345,35 @@ namespace CarSlineAPI.Models.Entities
         public int? Orden { get; set; }
     }
 
-    [Table("checklistservicios")]
+    [Table("pausastrabajos")]
+    public class pausatrabajo
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int TrabajoId { get; set; }
+
+        [Required]
+        public int OrdenGeneralId { get; set; }
+        public DateTime? FechaHoraPausa { get; set; }
+
+        public DateTime? FechaHoraReanudacion { get; set; }
+
+        [Required]
+        [Column(TypeName = "TEXT")]
+        public string Motivo { get; set; } = string.Empty;
+       
+        // Navegación
+        [ForeignKey("TrabajoId")]
+        public virtual TrabajoPorOrden? TrabajoPorOrden { get; set; }
+
+        [ForeignKey("OrdenGeneralId")]
+        public virtual OrdenGeneral? OrdenGeneral { get; set; }
+    }
+
+        [Table("checklistservicios")]
+    
     public class CheckListServicio
     {
         [Key]

@@ -24,10 +24,9 @@ namespace CarSlineAPI.Data
         public DbSet<HistorialServicio> HistorialServicios { get; set; }
         public DbSet<Refaccion> Refacciones { get; set; }
         public DbSet<CheckListServicio> CheckListServicios { get; set; }
-
-        // ✅ NUEVOS DbSets
         public DbSet<TrabajoPorOrden> TrabajosPorOrden { get; set; }
         public DbSet<EstadoTrabajo> EstadosTrabajos { get; set; }
+        public DbSet<pausatrabajo> PausasTrabajos { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
