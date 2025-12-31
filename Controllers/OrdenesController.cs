@@ -255,26 +255,39 @@ namespace CarSlineAPI.Controllers
         }
 
 
-        [HttpGet("Trabajos")]// Para obtener todas las ordenes generales 
+        /// <summary>
+        /// Obtener trabajos activos con información básica (para Jefe de Taller)
+        /// GET api/Ordenes/Trabajos
+        /// Estados: 2=Asignado, 3=En Proceso, 4=Completado, 5=Pausado
+        /// </summary>
+        [HttpGet("Trabajos")]
+        [ProducesResponseType(typeof(List<TrabajoSimpleDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> ObtenerTrabajosTecnicos()
         {
             try
             {
-                var Trabajos = await _db.TrabajosPorOrden
-                    .Include(o => o.Trabajo)
-                    .Include(o => o.OrdenGeneral.FechaHoraPromesaEntrega)
-                    .Include(o => o.TecnicoAsignado.NombreCompleto)
-                    .Include(o => o.EstadoTrabajo)
-                    .Include(o => o.FechaHoraAsignacionTecnico)
-                    .Where(o => o.Activo && new[] { 2, 3, 4, 5 }.Contains(o.EstadoTrabajo))
-                    .OrderBy(o => o.FechaHoraPromesaEntrega);
+                var trabajos = await _db.TrabajosPorOrden
+                    .Include(t => t.OrdenGeneral)
+                    .Include(t => t.TecnicoAsignado)
+                    .Include(t => t.EstadoTrabajoNavegacion)
+                    .Where(t => t.Activo && new[] { 2, 3, 4, 5 }.Contains(t.EstadoTrabajo))
+                    .OrderBy(t => t.OrdenGeneral.FechaHoraPromesaEntrega) // ✅ Los más urgentes primero
+                    .Select(t => new TrabajoSimpleDto
+                    {
+                        Trabajo = t.Trabajo,
+                        FechaHoraPromesaEntrega = t.OrdenGeneral.FechaHoraPromesaEntrega,
+                        TecnicoNombre = t.TecnicoAsignado != null ? t.TecnicoAsignado.NombreCompleto : "Sin asignar",
+                        EstadoTrabajoNombre = t.EstadoTrabajoNavegacion != null ? t.EstadoTrabajoNavegacion.NombreEstado : "Desconocido",
+                        FechaHoraAsignacionTecnico = t.FechaHoraAsignacionTecnico
+                    })
+                    .ToListAsync();
 
-                return Ok(Trabajos);
+                return Ok(trabajos);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener órdenes");
-                return StatusCode(500, new { Message = "Error al obtener órdenes" });
+                _logger.LogError(ex, "Error al obtener trabajos técnicos");
+                return StatusCode(500, new { Message = "Error al obtener trabajos" });
             }
         }
         /// <summary>

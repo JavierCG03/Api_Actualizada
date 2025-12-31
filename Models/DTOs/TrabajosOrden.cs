@@ -235,5 +235,17 @@ namespace CarSlineAPI.Models.DTOs
                     return $"{duracion.Minutes}m";
             }
         }
+
+    }
+    /// <summary>
+    /// DTO simplificado para lista de trabajos del Jefe de Taller
+    /// </summary>
+    public class TrabajoSimpleDto
+    {
+        public string Trabajo { get; set; } = string.Empty;
+        public DateTime FechaHoraPromesaEntrega { get; set; }
+        public string TecnicoNombre { get; set; } = string.Empty;
+        public string EstadoTrabajoNombre { get; set; } = string.Empty;
+        public DateTime? FechaHoraAsignacionTecnico { get; set; }
     }
 }
