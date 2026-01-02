@@ -253,25 +253,36 @@ namespace CarSlineAPI.Controllers
                 return StatusCode(500, new { Message = "Error al obtener órdenes" });
             }
         }
-
-
         /// <summary>
         /// Obtener trabajos activos con información básica (para Jefe de Taller)
-        /// GET api/Ordenes/Trabajos
-        /// Estados: 2=Asignado, 3=En Proceso, 4=Completado, 5=Pausado
+        /// GET api/Ordenes/Trabajos?fecha=2024-12-30
+        /// Estados: 2=Asignado, 3=En Proceso, 4=Completado (solo del día especificado), 5=Pausado
         /// </summary>
         [HttpGet("Trabajos")]
         [ProducesResponseType(typeof(List<TrabajoSimpleDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> ObtenerTrabajosTecnicos()
+        public async Task<IActionResult> ObtenerTrabajosTecnicos([FromQuery] DateTime? fecha = null)
         {
             try
             {
+                // ✅ Si no se proporciona fecha, usar hoy
+                var fechaFiltro = (fecha ?? DateTime.Today).Date;
+                var fechaSiguiente = fechaFiltro.AddDays(1);
+
                 var trabajos = await _db.TrabajosPorOrden
                     .Include(t => t.OrdenGeneral)
                     .Include(t => t.TecnicoAsignado)
                     .Include(t => t.EstadoTrabajoNavegacion)
-                    .Where(t => t.Activo && new[] { 2, 3, 4, 5 }.Contains(t.EstadoTrabajo))
-                    .OrderBy(t => t.OrdenGeneral.FechaHoraPromesaEntrega) // ✅ Los más urgentes primero
+                    .Where(t => t.Activo && (
+                        // Estados 2, 3, 5 sin filtro adicional
+                        new[] { 2, 3, 5 }.Contains(t.EstadoTrabajo) ||
+                        // Estado 4 (Completado) solo de la fecha especificada
+                        (t.EstadoTrabajo == 4 &&
+                         t.FechaHoraTermino.HasValue &&
+                         t.FechaHoraTermino.Value >= fechaFiltro &&
+                         t.FechaHoraTermino.Value < fechaSiguiente)
+                    ))
+                    .OrderBy(t => t.EstadoTrabajo)
+                    .ThenBy(t => t.OrdenGeneral.FechaHoraPromesaEntrega)
                     .Select(t => new TrabajoSimpleDto
                     {
                         Trabajo = t.Trabajo,
@@ -282,6 +293,10 @@ namespace CarSlineAPI.Controllers
                     })
                     .ToListAsync();
 
+                _logger.LogInformation(
+                    $"✅ Trabajos obtenidos para {fechaFiltro:yyyy-MM-dd}: {trabajos.Count} " +
+                    $"(Completados: {trabajos.Count(t => t.EstadoTrabajoNombre == "Completado")})");
+
                 return Ok(trabajos);
             }
             catch (Exception ex)
@@ -290,6 +305,7 @@ namespace CarSlineAPI.Controllers
                 return StatusCode(500, new { Message = "Error al obtener trabajos" });
             }
         }
+
         /// <summary>
         /// Obtener orden detallada con todos sus trabajos
         /// GET api/Ordenes/detalle/{ordenId}
