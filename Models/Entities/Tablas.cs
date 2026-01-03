@@ -261,6 +261,9 @@ namespace CarSlineAPI.Models.Entities
         [MaxLength(100)]
         public string TipoRefaccion { get; set; } = string.Empty;
 
+        [MaxLength(10)]
+        public string? Ubicacion { get; set; }
+
         [MaxLength(50)]
         public string? MarcaVehiculo { get; set; }
 

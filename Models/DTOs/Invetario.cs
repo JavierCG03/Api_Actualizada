@@ -16,6 +16,10 @@ namespace CarSlineAPI.Models.DTOs
         [MaxLength(50)]
         public string? MarcaVehiculo { get; set; }
 
+        [MaxLength(10)]
+        public string? Ubicacion { get; set; }
+
+
         [MaxLength(50)]
         public string? Modelo { get; set; }
 
@@ -43,6 +47,7 @@ namespace CarSlineAPI.Models.DTOs
         public int Id { get; set; }
         public string NumeroParte { get; set; } = string.Empty;
         public string TipoRefaccion { get; set; } = string.Empty;
+        public string? Ubicacion { get; set; }
         public string? MarcaVehiculo { get; set; }
         public string? Modelo { get; set; }
         public int? Anio { get; set; }

@@ -31,6 +31,7 @@ namespace CarSlineAPI.Controllers
                     NumeroParte = r.NumeroParte,
                     TipoRefaccion = r.TipoRefaccion,
                     MarcaVehiculo = r.MarcaVehiculo,
+                    Ubicacion = r.Ubicacion,
                     Modelo = r.Modelo,
                     Anio = r.Anio,
                     Cantidad = r.Cantidad,
@@ -69,7 +70,8 @@ namespace CarSlineAPI.Controllers
                         r.NumeroParte.ToUpper().Contains(busquedaUpper) ||
                         r.TipoRefaccion.ToUpper().Contains(busquedaUpper) ||
                         (r.MarcaVehiculo != null && r.MarcaVehiculo.ToUpper().Contains(busquedaUpper)) ||
-                        (r.Modelo != null && r.Modelo.ToUpper().Contains(busquedaUpper))
+                        (r.Modelo != null && r.Modelo.ToUpper().Contains(busquedaUpper)||
+                        (r.Ubicacion != null && r.Ubicacion.ToUpper().Contains(busquedaUpper)))
                     );
                 }
 
@@ -89,6 +91,7 @@ namespace CarSlineAPI.Controllers
                         TipoRefaccion = r.TipoRefaccion,
                         MarcaVehiculo = r.MarcaVehiculo,
                         Modelo = r.Modelo,
+                        Ubicacion = r.Ubicacion,
                         Anio = r.Anio,
                         Cantidad = r.Cantidad,
                         FechaRegistro = r.FechaRegistro,
@@ -145,6 +148,7 @@ namespace CarSlineAPI.Controllers
                         NumeroParte = r.NumeroParte,
                         TipoRefaccion = r.TipoRefaccion,
                         MarcaVehiculo = r.MarcaVehiculo,
+                        Ubicacion = r.Ubicacion,
                         Modelo = r.Modelo,
                         Anio = r.Anio,
                         Cantidad = r.Cantidad,
@@ -180,6 +184,7 @@ namespace CarSlineAPI.Controllers
                         NumeroParte = r.NumeroParte,
                         TipoRefaccion = r.TipoRefaccion,
                         MarcaVehiculo = r.MarcaVehiculo,
+                        Ubicacion = r.Ubicacion,
                         Modelo = r.Modelo,
                         Anio = r.Anio,
                         Cantidad = r.Cantidad,
@@ -233,6 +238,7 @@ namespace CarSlineAPI.Controllers
                     TipoRefaccion = request.TipoRefaccion,
                     MarcaVehiculo = request.MarcaVehiculo,
                     Modelo = request.Modelo,
+                    Ubicacion= request.Ubicacion,
                     Anio = request.Anio,
                     Cantidad = request.Cantidad,
                     FechaRegistro = DateTime.Now,
@@ -255,6 +261,7 @@ namespace CarSlineAPI.Controllers
                         NumeroParte = refaccion.NumeroParte,
                         TipoRefaccion = refaccion.TipoRefaccion,
                         MarcaVehiculo = refaccion.MarcaVehiculo,
+                        Ubicacion = refaccion.Ubicacion,
                         Modelo = refaccion.Modelo,
                         Anio = refaccion.Anio,
                         Cantidad = refaccion.Cantidad,
@@ -317,6 +324,7 @@ namespace CarSlineAPI.Controllers
                         NumeroParte = refaccion.NumeroParte,
                         TipoRefaccion = refaccion.TipoRefaccion,
                         MarcaVehiculo = refaccion.MarcaVehiculo,
+                        Ubicacion= refaccion.Ubicacion,
                         Modelo = refaccion.Modelo,
                         Anio = refaccion.Anio,
                         Cantidad = refaccion.Cantidad,
@@ -387,6 +395,7 @@ namespace CarSlineAPI.Controllers
                         NumeroParte = refaccion.NumeroParte,
                         TipoRefaccion = refaccion.TipoRefaccion,
                         MarcaVehiculo = refaccion.MarcaVehiculo,
+                        Ubicacion = refaccion.Ubicacion,
                         Modelo = refaccion.Modelo,
                         Anio = refaccion.Anio,
                         Cantidad = refaccion.Cantidad,
