@@ -484,6 +484,60 @@ namespace CarSlineAPI.Controllers
                 });
             }
         }
+        [HttpPut("restablecer-pendiente/{trabajoId}")]
+        [ProducesResponseType(typeof(TrabajoResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> RestablecerTrabajo(
+            int trabajoId,
+            [FromHeader(Name = "X-User-Id")] int tecnicoId)
+        {
+            try
+            {
+                var trabajo = await _db.Set<TrabajoPorOrden>().FindAsync(trabajoId);
+
+
+                if (trabajo == null || !trabajo.Activo)
+                    return NotFound(new TrabajoResponse
+                    {
+                        Success = false,
+                        Message = "Trabajo no encontrado"
+                    });
+
+                if (trabajo.TecnicoAsignadoId != tecnicoId)
+                    return Unauthorized(new TrabajoResponse
+                    {
+                        Success = false,
+                        Message = "No estás asignado a este trabajo"
+                    });
+
+                if (trabajo.EstadoTrabajo != 3)
+                    return BadRequest(new TrabajoResponse
+                    {
+                        Success = false,
+                        Message = "El trabajo no se puede restablecer"
+                    });
+
+                trabajo.EstadoTrabajo = 2; // Asignado
+
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation($"Trabajo {trabajoId} restablecido por técnico {tecnicoId}");
+
+                return Ok(new TrabajoResponse
+                {
+                    Success = true,
+                    Message = "Trabajo restablecido exitosamente"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al restablecer trabajo");
+                return StatusCode(500, new TrabajoResponse
+                {
+                    Success = false,
+                    Message = "Error al restablecer trabajo"
+                });
+            }
+        }
 
         [HttpPut("Pausar/{trabajoId}")]
         [ProducesResponseType(typeof(TrabajoResponse), StatusCodes.Status200OK)]
