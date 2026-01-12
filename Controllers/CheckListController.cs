@@ -130,7 +130,8 @@ namespace CarSlineAPI.Controllers
                         DescristalizacionTamboresDiscos = request.DescristalizacionTamboresDiscos,
                         AjusteFrenos = request.AjusteFrenos,
                         CalibracionPresionNeumaticos = request.CalibracionPresionNeumaticos,
-                        TorqueNeumaticos = request.TorqueNeumaticos
+                        TorqueNeumaticos = request.TorqueNeumaticos,
+                        RotacionNeumaticos = request.RotacionNeumaticos
                     };
 
                     _db.Set<CheckListServicio>().Add(nuevoCheckList);

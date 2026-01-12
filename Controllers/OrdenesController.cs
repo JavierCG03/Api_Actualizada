@@ -395,12 +395,12 @@ namespace CarSlineAPI.Controllers
 
                 // Cancelar todos los trabajos pendientes
                 var trabajos = await _db.TrabajosPorOrden
-                    .Where(t => t.OrdenGeneralId == ordenId && t.Activo && t.EstadoTrabajo == 1)
+                    .Where(t => t.OrdenGeneralId == ordenId && t.Activo && (t.EstadoTrabajo == 1 || t.EstadoTrabajo == 2))
                     .ToListAsync();
 
                 foreach (var trabajo in trabajos)
                 {
-                    trabajo.EstadoTrabajo = 5; // Cancelado
+                    trabajo.EstadoTrabajo = 6; // Cancelado
                 }
 
                 await _db.SaveChangesAsync();

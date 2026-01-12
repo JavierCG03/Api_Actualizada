@@ -106,6 +106,7 @@ namespace CarSlineAPI.Models.DTOs
         public bool DescristalizacionTamboresDiscos { get; set; } = true;
         public bool AjusteFrenos { get; set; } = true;
         public bool CalibracionPresionNeumaticos { get; set; } = true;
+        public bool RotacionNeumaticos { get; set; } =false;
         public bool TorqueNeumaticos { get; set; } = true;
     }
 

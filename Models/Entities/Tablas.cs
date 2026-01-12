@@ -523,6 +523,7 @@ namespace CarSlineAPI.Models.Entities
 
         [Required]
         public bool TorqueNeumaticos { get; set; } = true;
+        public bool RotacionNeumaticos { get; set; } = false;
 
         // Navegación
         [ForeignKey("TrabajoId")]
