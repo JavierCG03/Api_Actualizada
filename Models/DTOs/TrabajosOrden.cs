@@ -109,6 +109,7 @@ namespace CarSlineAPI.Models.DTOs
         public int TrabajosCompletados { get; set; }
         public decimal ProgresoGeneral { get; set; }
         public string? ObservacionesAsesor { get; set; }
+        public bool TieneEvidencia { get; set; }
 
         // Lista de trabajos
         public List<TrabajoDto> Trabajos { get; set; } = new();

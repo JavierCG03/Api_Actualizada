@@ -213,6 +213,7 @@ namespace CarSlineAPI.Models.Entities
         public decimal ProgresoGeneral { get; set; }
         public int EstadoOrdenId { get; set; } = 1;
         public bool Activo { get; set; } = true;
+        public bool TieneEvidencia { get; set; } = false;
 
         // relaciones
         public virtual ICollection<TrabajoPorOrden> Trabajos { get; set; } = new List<TrabajoPorOrden>();

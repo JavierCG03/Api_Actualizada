@@ -91,6 +91,11 @@ namespace CarSlineAPI.Controllers
                         evidenciasGuardadas.Add(evidencia);
                     }
                 }
+                // Buscar el trabajo
+                var Orden = await _db.Set<OrdenGeneral>()
+                    .FirstOrDefaultAsync(t => t.Id == model.OrdenGeneralId);
+
+                Orden.TieneEvidencia = true;
 
                 await _db.SaveChangesAsync();
 

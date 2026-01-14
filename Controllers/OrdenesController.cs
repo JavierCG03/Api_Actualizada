@@ -177,6 +177,7 @@ namespace CarSlineAPI.Controllers
                         TrabajosCompletados = o.TrabajosCompletados,
                         ProgresoGeneral = o.ProgresoGeneral,
                         CostoTotal = o.CostoTotal,
+                        TieneEvidencia = o.TieneEvidencia,
                         Trabajos = o.Trabajos
                             .Where(t => t.Activo)
                             .Select(t => new TrabajoDto
@@ -190,7 +191,6 @@ namespace CarSlineAPI.Controllers
                             }).ToList()
                     })
                     .ToListAsync();
-
                 return Ok(ordenes);
             }
             catch (Exception ex)
