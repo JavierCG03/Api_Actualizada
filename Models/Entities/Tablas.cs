@@ -375,7 +375,7 @@ namespace CarSlineAPI.Models.Entities
         public virtual OrdenGeneral? OrdenGeneral { get; set; }
     }
 
-        [Table("checklistservicios")]
+    [Table("checklistservicios")]
     
     public class CheckListServicio
     {
@@ -528,6 +528,28 @@ namespace CarSlineAPI.Models.Entities
         // Navegación
         [ForeignKey("TrabajoId")]
         public virtual TrabajoPorOrden? TrabajoPorOrden { get; set; }
+
+        [ForeignKey("OrdenGeneralId")]
+        public virtual OrdenGeneral? OrdenGeneral { get; set; }
+    }
+
+    [Table("evidenciasorden")]
+    public class Evidenciaorden
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int OrdenGeneralId { get; set; }
+        public DateTime? FechaRegistro { get; set; }
+
+        [Required]
+        [MaxLength(500)]
+        public string RutaImagen { get; set; } = string.Empty;
+
+        [MaxLength(255)]
+        public string Descripcion { get; set; } = string.Empty;
+        public bool Activo { get; set; } = true;
 
         [ForeignKey("OrdenGeneralId")]
         public virtual OrdenGeneral? OrdenGeneral { get; set; }
