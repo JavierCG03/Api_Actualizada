@@ -39,9 +39,14 @@ namespace CarSlineAPI.Controllers
                     return BadRequest("El número de descripciones debe coincidir con el número de imágenes");
                 }
 
+                // Buscar el trabajo
+                var Orden = await _db.Set<OrdenGeneral>()
+                    .FirstOrDefaultAsync(t => t.Id == model.OrdenGeneralId);
+
                 // Verificar que la orden existe
                 var ordenExiste = await _db.Set<OrdenGeneral>()
                     .AnyAsync(o => o.Id == model.OrdenGeneralId);
+
 
                 if (!ordenExiste)
                 {
@@ -49,10 +54,11 @@ namespace CarSlineAPI.Controllers
                 }
 
                 // Crear carpeta específica para esta orden
-                string carpetaOrden = Path.Combine(_rutaBaseEvidencias, $"Orden_{model.OrdenGeneralId}");
+                string carpetaOrden = Path.Combine(_rutaBaseEvidencias, $"{Orden.NumeroOrden}/Recepcion");
                 if (!Directory.Exists(carpetaOrden))
                 {
                     Directory.CreateDirectory(carpetaOrden);
+
                 }
 
                 var evidenciasGuardadas = new List<Evidenciaorden>();
@@ -68,7 +74,7 @@ namespace CarSlineAPI.Controllers
                         // Generar nombre único para el archivo
                         string descripcionLimpia = LimpiarNombreArchivo(descripcion);
                         string extension = Path.GetExtension(imagen.FileName);
-                        string nombreArchivo = $"{descripcionLimpia}_{DateTime.Now:yyyyMMddHHmmss}{extension}";
+                        string nombreArchivo = $"{descripcionLimpia}_{DateTime.Now:dd_HH_mm_ss}{extension}";
                         string rutaCompleta = Path.Combine(carpetaOrden, nombreArchivo);
 
                         // Guardar archivo físico
@@ -91,10 +97,6 @@ namespace CarSlineAPI.Controllers
                         evidenciasGuardadas.Add(evidencia);
                     }
                 }
-                // Buscar el trabajo
-                var Orden = await _db.Set<OrdenGeneral>()
-                    .FirstOrDefaultAsync(t => t.Id == model.OrdenGeneralId);
-
                 Orden.TieneEvidencia = true;
 
                 await _db.SaveChangesAsync();

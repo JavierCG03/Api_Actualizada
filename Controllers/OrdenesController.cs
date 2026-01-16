@@ -172,6 +172,7 @@ namespace CarSlineAPI.Controllers
                         VIN = o.Vehiculo.VIN,
                         Placas = o.Vehiculo.Placas ?? "",
                         FechaHoraPromesaEntrega = o.FechaHoraPromesaEntrega,
+                        HoraFin = o.FechaFinalizacion,
                         EstadoOrdenId = o.EstadoOrdenId,
                         TotalTrabajos = o.TotalTrabajos,
                         TrabajosCompletados = o.TrabajosCompletados,
