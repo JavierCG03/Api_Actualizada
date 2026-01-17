@@ -21,12 +21,10 @@ namespace CarSlineAPI.Controllers
             _db = db;
             _logger = logger;
         }
-
         /// <summary>
         /// ✅ NUEVO: Crear orden con lista de trabajos
         /// POST api/Ordenes/crear-con-trabajos
-        /// </summary>
-        
+        /// </summary>     
         [HttpPost("crear-con-trabajos")]
         public async Task<IActionResult> CrearOrdenConTrabajos(
             [FromBody] CrearOrdenConTrabajosRequest request,
@@ -459,57 +457,6 @@ namespace CarSlineAPI.Controllers
             }
         }
 
-        [HttpGet("historial-servicio/{vehiculoId}")]
-        [ProducesResponseType(typeof(HistorialVehiculoResponse), StatusCodes.Status200OK)]
-        public async Task<IActionResult> ObtenerHistorialServicio(int vehiculoId)
-        {
-            try
-            {
-                var fechaLimite = DateTime.Now.AddMonths(-12);
-
-                var ordenes = await _db.OrdenesGenerales
-                    .Include(o => o.TipoServicio) // Necesario para o.TipoServicio.NombreServicio
-                    .Where(o => o.VehiculoId == vehiculoId
-                             && o.Activo
-                             && o.TipoOrdenId == 1   // Solo órdenes de servicio
-                             && o.EstadoOrdenId == 4 // Solo órdenes ENTREGADAS
-                             && o.FechaCreacion >= fechaLimite)
-                    .OrderByDescending(o => o.FechaCreacion)
-                    .ToListAsync();
-
-                var historial = ordenes.Select(o => new HistorialServicioDto
-                {
-                    NumeroOrden = o.NumeroOrden,
-                    FechaServicio = o.FechaCreacion,
-                    TipoServicio = o.TipoServicio.NombreServicio ?? "",
-                    KilometrajeRegistrado = o.KilometrajeActual,
-                    ObservacionesAsesor = o.ObservacionesAsesor ?? ""
-                }).ToList();
-
-                var ultimoServicio = historial.FirstOrDefault();
-
-                return Ok(new HistorialVehiculoResponse
-                {
-                    Success = true,
-                    Message = historial.Any() ? "Historial encontrado" : "Sin servicios recientes",
-                    Historial = historial,
-                    UltimoServicio = ultimoServicio?.TipoServicio ?? "",
-                    UltimoKilometraje = ultimoServicio?.KilometrajeRegistrado ?? 0,
-                    UltimaFechaServicio = ultimoServicio?.FechaServicio
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error al obtener historial del vehículo {vehiculoId}");
-
-                return StatusCode(500, new HistorialVehiculoResponse
-                {
-                    Success = false,
-                    Message = "Error al obtener historial de servicios",
-                    Historial = new List<HistorialServicioDto>()
-                });
-            }
-        }
         
     }  
 }

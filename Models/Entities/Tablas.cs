@@ -163,6 +163,20 @@ namespace CarSlineAPI.Models.Entities
 
         public bool Activo { get; set; } = true;
     }
+    [Table("TiposOrden")]
+    public class TipoOrden
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required, MaxLength(150)]
+        public string NombreTipo { get; set; } = string.Empty;
+
+        [MaxLength(500)]
+        public string? Descripcion { get; set; }
+
+        public bool Activo { get; set; } = true;
+    }
 
 
     [Table("ServiciosFrecuentes")]
@@ -220,6 +234,8 @@ namespace CarSlineAPI.Models.Entities
         public virtual Cliente Cliente { get; set; }
         public virtual Vehiculo Vehiculo { get; set; }
         public virtual Usuario Asesor { get; set; }
+        public virtual EstadoOrden EstadoOrden { get; set; }
+        public virtual TipoOrden TipoOrden { get; set; }
         public virtual TipoServicio TipoServicio { get; set; }
 
     }
@@ -347,6 +363,19 @@ namespace CarSlineAPI.Models.Entities
         public string? Color { get; set; }
 
         public int? Orden { get; set; }
+    }
+
+    [Table("estadosorden")]
+    public class EstadoOrden
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required, MaxLength(50)]
+        public string NombreEstado { get; set; } = string.Empty;
+
+        [MaxLength(200)]
+        public string? Descripcion { get; set; }
     }
 
     [Table("pausastrabajos")]

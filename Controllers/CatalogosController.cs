@@ -36,7 +36,7 @@ namespace CarSlineAPI.Controllers
                 .OrderBy(s => s.Categoria).ThenBy(s => s.NombreServicio)
                 .Select(s => new { s.Id, Nombre = s.NombreServicio, Descripcion = s.Descripcion, Precio = s.Precio, Categoria = s.Categoria })
                 .ToListAsync();
-
+             
             return Ok(servicios);
         }
     }
