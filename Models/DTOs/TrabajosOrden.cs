@@ -92,9 +92,11 @@ namespace CarSlineAPI.Models.DTOs
         public string NumeroOrden { get; set; } = string.Empty;
         public int TipoOrdenId { get; set; }
         public string TipoOrden { get; set; } = string.Empty;
+        public int ClienteId { get; set; }
         public string ClienteNombre { get; set; } = string.Empty;
         public string ClienteTelefono { get; set; } = string.Empty;
         public string TipoServicio { get; set; } = string.Empty;
+        public int VehiculoId { get; set; }
         public string VehiculoCompleto { get; set; } = string.Empty;
         public string VIN { get; set; } = string.Empty;
         public string Placas { get; set; } = string.Empty;
