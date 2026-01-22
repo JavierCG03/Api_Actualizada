@@ -1,5 +1,6 @@
 ﻿using CarSlineAPI.Data;
 using CarSlineAPI.Models.DTOs;
+using CarSlineAPI.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -110,6 +111,7 @@ namespace CarSlineAPI.Controllers
             {
                 var orden = await _db.OrdenesGenerales
                     .Include(o => o.Cliente)
+                    .Include(o => o.EstadoOrden)
                     .Include(o => o.Vehiculo)
                     .Where(o => o.NumeroOrden == numeroOrden.ToUpper() && o.Activo)
                     .Select(o => new OrdenSimpleDto
@@ -119,9 +121,7 @@ namespace CarSlineAPI.Controllers
                         ClienteNombre = o.Cliente.NombreCompleto,
                         VehiculoInfo = $"{o.Vehiculo.Marca} {o.Vehiculo.Modelo} {o.Vehiculo.Anio}",
                         FechaCreacion = o.FechaCreacion,
-                        EstadoOrdenId = o.EstadoOrdenId,
-                        // ✅ Estado se asigna después en memoria
-                        EstadoOrden = "" // Temporal
+                        EstadoOrden =o.EstadoOrden.NombreEstado??  "Desconocido" 
                     })
                     .FirstOrDefaultAsync();
 
@@ -133,9 +133,6 @@ namespace CarSlineAPI.Controllers
                         Message = "Orden no encontrada"
                     });
                 }
-
-                // ✅ Asignar el estado después de traer los datos
-                orden.EstadoOrden = GetEstadoOrdenTexto(orden.EstadoOrdenId);
 
                 return Ok(new BuscarOrdenResponse
                 {
@@ -209,6 +206,7 @@ namespace CarSlineAPI.Controllers
             // ✅ SOLUCIÓN: Traer los datos primero, luego aplicar métodos en memoria
             var ordenes = await _db.OrdenesGenerales
                 .Include(o => o.Cliente)
+                .Include(o=> o.EstadoOrden)
                 .Include(o => o.Vehiculo)
                 .Where(o => o.Activo && o.NumeroOrden.Contains(numeroOrden))
                 .OrderByDescending(o => o.FechaCreacion)
@@ -219,6 +217,7 @@ namespace CarSlineAPI.Controllers
                     o.NumeroOrden,
                     ClienteNombre = o.Cliente.NombreCompleto,
                     VehiculoInfo = $"{o.Vehiculo.Marca} {o.Vehiculo.Modelo}",
+                    EstadoOrden = o.EstadoOrden.NombreEstado,
                     o.EstadoOrdenId
                 })
                 .ToListAsync(); // ✅ Ejecuta la query aquí
@@ -231,7 +230,7 @@ namespace CarSlineAPI.Controllers
                 TipoTexto = "Orden",
                 TituloPrincipal = o.NumeroOrden,
                 Subtitulo = o.ClienteNombre,
-                Detalle = $"{o.VehiculoInfo} | {GetEstadoOrdenTexto(o.EstadoOrdenId)}",
+                Detalle = $"{o.VehiculoInfo} | {o.EstadoOrden}",
                 IconoColor = GetColorEstadoOrden(o.EstadoOrdenId),
                 Icono = "📋"
             }).ToList();
@@ -270,25 +269,15 @@ namespace CarSlineAPI.Controllers
             return true;
         }
 
-        // ✅ MÉTODOS AHORA SON PRIVADOS (no static, porque se usan después de ToListAsync)
-        private static string GetEstadoOrdenTexto(int estadoId)
-        {
-            return estadoId switch
-            {
-                1 => "Pendiente",
-                2 => "En Proceso",
-                3 => "Finalizada",
-                _ => "Desconocido"
-            };
-        }
-
         private static string GetColorEstadoOrden(int estadoId)
         {
             return estadoId switch
             {
                 1 => "#FFA500", // Pendiente - Naranja
                 2 => "#2196F3", // En Proceso - Azul
-                3 => "#4CAF50", // Finalizada - Verde
+                3 => "#00BCD4", // Finalizada - Turquesa
+                4 => "#4CAF50", // Entregada - Verde 
+                5 => "#757575", // Cancelada - Gris oscuro
                 _ => "#757575"  // Desconocido - Gris
             };
         }

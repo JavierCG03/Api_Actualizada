@@ -317,7 +317,10 @@ namespace CarSlineAPI.Controllers
                 var orden = await _db.OrdenesGenerales
                     .Include(o => o.Cliente)
                     .Include(o => o.Vehiculo)
+                    .Include(o =>o.TipoOrden)
+                    .Include(o => o.TipoServicio)
                     .Include(o => o.Asesor)
+                    .Include(o => o.EstadoOrden)
                     .Include(o => o.Trabajos.Where(t => t.Activo))
                         .ThenInclude(t => t.TecnicoAsignado)
                     .Include(o => o.Trabajos)
@@ -328,6 +331,8 @@ namespace CarSlineAPI.Controllers
                         Id = o.Id,
                         NumeroOrden = o.NumeroOrden,
                         TipoOrdenId = o.TipoOrdenId,
+                        TipoOrden= o.TipoOrden.NombreTipo,
+                        TipoServicio= o.TipoServicio.NombreServicio,
                         ClienteId= o.ClienteId,
                         ClienteNombre = o.Cliente.NombreCompleto,
                         ClienteTelefono = o.Cliente.TelefonoMovil,
@@ -340,6 +345,7 @@ namespace CarSlineAPI.Controllers
                         FechaCreacion = o.FechaCreacion,
                         FechaHoraPromesaEntrega = o.FechaHoraPromesaEntrega,
                         EstadoOrdenId = o.EstadoOrdenId,
+                        EstadoOrden = o.EstadoOrden.NombreEstado,
                         CostoTotal = o.CostoTotal,
                         TotalTrabajos = o.TotalTrabajos,
                         TrabajosCompletados = o.TrabajosCompletados,

@@ -107,7 +107,7 @@ namespace CarSlineAPI.Models.DTOs
         public DateTime? HoraFin { get; set; }
         public int EstadoOrdenId { get; set; }
         public string EstadoOrden { get; set; } = string.Empty;
-        public decimal CostoTotal { get; set; }
+        public decimal? CostoTotal { get; set; }
         public int TotalTrabajos { get; set; }
         public int TrabajosCompletados { get; set; }
         public decimal ProgresoGeneral { get; set; }

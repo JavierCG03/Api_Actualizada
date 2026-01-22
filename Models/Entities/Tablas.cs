@@ -162,6 +162,7 @@ namespace CarSlineAPI.Models.Entities
         public decimal PrecioBase { get; set; }
 
         public bool Activo { get; set; } = true;
+
     }
     [Table("TiposOrden")]
     public class TipoOrden
@@ -220,7 +221,10 @@ namespace CarSlineAPI.Models.Entities
         public DateTime? FechaEntrega { get; set; }
         public string? ObservacionesAsesor { get; set; }
         public string? ObservacionesJefe { get; set; }
-        public decimal CostoTotal { get; set; }
+
+        [Column(TypeName = "DECIMAL(10,2)")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public decimal? CostoTotal { get; set; }
         public decimal TiempoTotalHoras { get; set; }
         public int TotalTrabajos { get; set; }
         public int TrabajosCompletados { get; set; }
@@ -299,6 +303,7 @@ namespace CarSlineAPI.Models.Entities
         public bool Activo { get; set; } = true;
     }
 
+
     [Table("trabajopororden")]
     public class TrabajoPorOrden
     {
@@ -313,11 +318,8 @@ namespace CarSlineAPI.Models.Entities
         public string Trabajo { get; set; } = string.Empty;
 
         public int? TecnicoAsignadoId { get; set; }
-
         public DateTime? FechaHoraAsignacionTecnico { get; set; }
-
         public DateTime? FechaHoraInicio { get; set; }
-
         public DateTime? FechaHoraTermino { get; set; }
 
         [Column(TypeName = "TEXT")]
@@ -332,8 +334,18 @@ namespace CarSlineAPI.Models.Entities
         [Required]
         public int EstadoTrabajo { get; set; } = 1; // 1=Pendiente
 
-        public bool Activo { get; set; } = true;
+        [Column(TypeName = "DECIMAL(10,2)")]
+        public decimal CostoManoObra { get; set; } = 0.00m;
 
+        [Column(TypeName = "DECIMAL(10,2)")]
+        public decimal RefaccionesTotal { get; set; } = 0.00m;
+
+  
+        [Column(TypeName = "DECIMAL(10,2)")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public decimal? CostoTotal { get; set; }
+
+        public bool Activo { get; set; } = true;
         public DateTime FechaCreacion { get; set; } = DateTime.Now;
 
         // Navegación
@@ -580,10 +592,44 @@ namespace CarSlineAPI.Models.Entities
         [MaxLength(255)]
         public string Descripcion { get; set; } = string.Empty;
         public bool Activo { get; set; } = true;
+        public bool EvidenciaTrabajo { get; set; } = false;
 
         [ForeignKey("OrdenGeneralId")]
         public virtual OrdenGeneral? OrdenGeneral { get; set; }
     }
+
+    [Table("refaccionestrabajo")]
+    public class Refacciontrabajo
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int TrabajoId { get; set; }
+
+        [Required]
+        public int OrdenGeneralId { get; set; }
+
+        [Required]
+        [MaxLength(255)]
+        public string Refaccion { get; set; } = string.Empty;
+
+        public decimal PrecioUnitario { get; set; }
+
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public decimal Total { get; private set; }
+
+        [Required]
+        public int Cantidad { get; set; }
+
+        // Navegación
+        [ForeignKey("TrabajoId")]
+        public virtual TrabajoPorOrden? TrabajoPorOrden { get; set; }
+
+        [ForeignKey("OrdenGeneralId")]
+        public virtual OrdenGeneral? OrdenGeneral { get; set; }
+    }
+
 }
 
 
