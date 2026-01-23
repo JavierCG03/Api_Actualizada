@@ -28,6 +28,7 @@ namespace CarSlineAPI.Data
         public DbSet<EstadoTrabajo> EstadosTrabajos { get; set; }
         public DbSet<pausatrabajo> PausasTrabajos { get; set; }
         public DbSet<Evidenciaorden> Evidenciasorden { get; set; }
+        public DbSet<Refacciontrabajo> Refaccionestrabajo { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

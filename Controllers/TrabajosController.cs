@@ -580,9 +580,9 @@ namespace CarSlineAPI.Controllers
                         Success = false,
                         Message = "El trabajo no se puede pausar porque no está en proceso"
                     });
-                
+
                 trabajo.EstadoTrabajo = 5; // Pausado
-              
+
                 var pausa = new pausatrabajo
                 {
                     TrabajoId = trabajo.Id,
