@@ -484,6 +484,8 @@ namespace CarSlineAPI.Controllers
                 });
             }
         }
+
+
         [HttpPut("restablecer-pendiente/{trabajoId}")]
         [ProducesResponseType(typeof(TrabajoResponse), StatusCodes.Status200OK)]
         public async Task<IActionResult> RestablecerTrabajo(
@@ -660,11 +662,9 @@ namespace CarSlineAPI.Controllers
                         Message = "No existe una pausa activa para este trabajo"
                     });
 
-                // 🟢 Cerrar la pausa
                 pausaActiva.FechaHoraReanudacion = DateTime.Now;
 
-                // 🔵 Cambiar estado del trabajo
-                trabajo.EstadoTrabajo = 3; // En proceso
+                trabajo.EstadoTrabajo = 3; 
 
                 await _db.SaveChangesAsync();
 

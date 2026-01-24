@@ -19,10 +19,6 @@ namespace CarSlineAPI.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// Agregar múltiples refacciones a un trabajo
-        /// POST api/RefaccionesTrabajo/agregar
-        /// </summary>
         [HttpPost("agregar")]
         [ProducesResponseType(typeof(AgregarRefaccionesResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -37,8 +33,6 @@ namespace CarSlineAPI.Controllers
                     Message = "Datos inválidos"
                 });
             }
-
-            await using var transaction = await _db.Database.BeginTransactionAsync();
 
             try
             {
@@ -57,21 +51,22 @@ namespace CarSlineAPI.Controllers
                 }
 
                 // Validar que el trabajo no esté completado o cancelado
-                if (trabajo.EstadoTrabajo == 4 || trabajo.EstadoTrabajo == 6)
+                if (trabajo.EstadoTrabajo == 6)
                 {
                     return BadRequest(new AgregarRefaccionesResponse
                     {
                         Success = false,
-                        Message = "No se pueden agregar refacciones a un trabajo completado o cancelado"
+                        Message = "No se pueden agregar refacciones a un trabajo cancelado"
                     });
                 }
 
                 var refaccionesAgregadas = new List<RefaccionTrabajoDto>();
-                decimal totalRefacciones = 0;
+
 
                 // Procesar cada refacción
                 foreach (var refaccionDto in request.Refacciones)
                 {
+ 
                     var refaccionTrabajo = new Refacciontrabajo
                     {
                         TrabajoId = request.TrabajoId,
@@ -82,50 +77,48 @@ namespace CarSlineAPI.Controllers
                     };
 
                     _db.Set<Refacciontrabajo>().Add(refaccionTrabajo);
-                    await _db.SaveChangesAsync(); // Para obtener el ID y el Total calculado
-
-                    // Recargar para obtener el Total calculado por la base de datos
-                    await _db.Entry(refaccionTrabajo).ReloadAsync();
-
-                    var total = refaccionDto.Cantidad * refaccionDto.PrecioUnitario;
-                    totalRefacciones += total;
 
                     refaccionesAgregadas.Add(new RefaccionTrabajoDto
                     {
-                        Id = refaccionTrabajo.Id,
+                        Id = 0, // Se asignará después del SaveChanges
                         TrabajoId = refaccionTrabajo.TrabajoId,
                         OrdenGeneralId = refaccionTrabajo.OrdenGeneralId,
                         Refaccion = refaccionTrabajo.Refaccion,
                         Cantidad = refaccionTrabajo.Cantidad,
                         PrecioUnitario = refaccionTrabajo.PrecioUnitario,
-                        Total = total
                     });
                 }
 
-                // Actualizar el total de refacciones en el trabajo
-                trabajo.RefaccionesTotal = totalRefacciones;
                 await _db.SaveChangesAsync();
 
-                // Actualizar el progreso general de la orden
-                await ActualizarProgresoOrden(trabajo.OrdenGeneralId);
+                await _db.Entry(trabajo).ReloadAsync();
 
-                await transaction.CommitAsync();
+                var refaccionesGuardadas = await _db.Set<Refacciontrabajo>()
+                    .Where(r => r.TrabajoId == request.TrabajoId)
+                    .OrderByDescending(r => r.Id)
+                    .Take(request.Refacciones.Count)
+                    .ToListAsync();
+
+                for (int i = 0; i < refaccionesAgregadas.Count && i < refaccionesGuardadas.Count; i++)
+                {
+                    refaccionesAgregadas[i].Id = refaccionesGuardadas[i].Id;
+                }
 
                 _logger.LogInformation(
-                    $"Se agregaron {refaccionesAgregadas.Count} refacciones al trabajo {request.TrabajoId}. Total: ${totalRefacciones:F2}");
+                    $"Se agregaron {refaccionesAgregadas.Count} refacciones al trabajo {request.TrabajoId}. " +
+                    $"Total calculado por trigger: ${trabajo.RefaccionesTotal:F2}");
 
                 return Ok(new AgregarRefaccionesResponse
                 {
                     Success = true,
                     Message = $"Se agregaron {refaccionesAgregadas.Count} refacción(es) exitosamente",
                     RefaccionesAgregadas = refaccionesAgregadas,
-                    TotalRefacciones = totalRefacciones,
+                    TotalRefacciones = trabajo.RefaccionesTotal, // ✅ Usar el valor actualizado por el trigger
                     CantidadRefacciones = refaccionesAgregadas.Count
                 });
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync();
                 _logger.LogError(ex, $"Error al agregar refacciones al trabajo {request.TrabajoId}");
                 return StatusCode(500, new AgregarRefaccionesResponse
                 {
@@ -207,8 +200,6 @@ namespace CarSlineAPI.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> EliminarRefaccion(int refaccionId)
         {
-            await using var transaction = await _db.Database.BeginTransactionAsync();
-
             try
             {
                 var refaccion = await _db.Set<Refacciontrabajo>()
@@ -236,27 +227,11 @@ namespace CarSlineAPI.Controllers
 
                 var trabajoId = refaccion.TrabajoId;
                 var ordenId = refaccion.OrdenGeneralId;
-                var totalEliminado = refaccion.PrecioUnitario * refaccion.Cantidad;
 
-                // Eliminar la refacción
                 _db.Set<Refacciontrabajo>().Remove(refaccion);
-
-                // Actualizar el total del trabajo
-                var trabajo = await _db.TrabajosPorOrden.FindAsync(trabajoId);
-                if (trabajo != null)
-                {
-                    trabajo.RefaccionesTotal -= totalEliminado;
-                    if (trabajo.RefaccionesTotal < 0) trabajo.RefaccionesTotal = 0;
-                }
-
                 await _db.SaveChangesAsync();
 
-                // Actualizar progreso de la orden
-                await ActualizarProgresoOrden(ordenId);
-
-                await transaction.CommitAsync();
-
-                _logger.LogInformation($"Refacción {refaccionId} eliminada del trabajo {trabajoId}");
+                _logger.LogInformation($"Refacción {refaccionId} eliminada del trabajo {trabajoId}. Los totales se actualizaron automáticamente vía trigger.");
 
                 return Ok(new AgregarRefaccionesResponse
                 {
@@ -266,7 +241,6 @@ namespace CarSlineAPI.Controllers
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync();
                 _logger.LogError(ex, $"Error al eliminar refacción {refaccionId}");
                 return StatusCode(500, new AgregarRefaccionesResponse
                 {
@@ -334,32 +308,6 @@ namespace CarSlineAPI.Controllers
                     Message = "Error al obtener refacciones"
                 });
             }
-        }
-
-        // ============================================
-        // MÉTODOS PRIVADOS AUXILIARES
-        // ============================================
-
-        private async Task ActualizarProgresoOrden(int ordenId)
-        {
-            var orden = await _db.OrdenesGenerales
-                .Include(o => o.Trabajos)
-                .FirstOrDefaultAsync(o => o.Id == ordenId);
-
-            if (orden == null) return;
-
-            // Recalcular totales
-            orden.TotalTrabajos = orden.Trabajos.Count(t => t.Activo);
-            orden.TrabajosCompletados = orden.Trabajos.Count(t => t.Activo && t.EstadoTrabajo == 4);
-
-            // Calcular progreso
-            if (orden.TotalTrabajos > 0)
-            {
-                orden.ProgresoGeneral = Math.Round(
-                    ((decimal)orden.TrabajosCompletados / orden.TotalTrabajos) * 100, 2);
-            }
-
-            await _db.SaveChangesAsync();
         }
     }
 }
