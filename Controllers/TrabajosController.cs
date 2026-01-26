@@ -688,6 +688,125 @@ namespace CarSlineAPI.Controllers
             }
         }
 
+        [HttpPut("FijarCostoManoObra/{trabajoId}")]
+        [ProducesResponseType(typeof(ManoObraResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> FijarManoObra(
+           int trabajoId,
+           [FromBody] FijarManoObraRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ManoObraResponse
+                {
+                    Success = false,
+                    Message = "Datos inválidos"
+                });
+            }
+
+            try
+            {
+                var trabajo = await _db.TrabajosPorOrden
+                    .Include(t => t.OrdenGeneral)
+                    .FirstOrDefaultAsync(t => t.Id == trabajoId && t.Activo);
+
+                if (trabajo == null)
+                {
+                    return NotFound(new ManoObraResponse
+                    {
+                        Success = false,
+                        Message = "Trabajo no encontrado"
+                    });
+                }
+
+
+                if (trabajo.EstadoTrabajo == 6)
+                {
+                    return BadRequest(new ManoObraResponse
+                    {
+                        Success = false,
+                        Message = "No se puede fijar mano de obra a un trabajo cancelado",
+                        
+                    });
+                }
+
+
+                if (request.CostoManoObra < 0)
+                {
+                    return BadRequest(new ManoObraResponse
+                    {
+                        Success = false,
+                        Message = "El costo de mano de obra debe ser mayor o igual a 0"
+                    });
+                }
+
+                // Actualizar el costo de mano de obra
+                trabajo.CostoManoObra = request.CostoManoObra;
+
+                await _db.SaveChangesAsync();
+
+                return Ok(new ManoObraResponse
+                {
+                    Success = true,
+                    Message = "Costo de mano de obra actualizado exitosamente",
+                    CostoManoObra = trabajo.CostoManoObra
+
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al fijar mano de obra del trabajo {trabajoId}");
+                return StatusCode(500, new ManoObraResponse
+                {
+                    Success = false,
+                    Message = "Error al fijar el costo de mano de obra"
+                });
+            }
+        }
+
+        [HttpGet("CostoManoObra/{trabajoId}")]
+        [ProducesResponseType(typeof(ManoObraResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ObtenerManoObraPorTrabajo(int trabajoId)
+        {
+            try
+            {
+                var trabajo = await _db.TrabajosPorOrden
+                    .Where(t => t.Id == trabajoId && t.Activo)
+                    .Select(t => new
+                    { 
+                        t.CostoManoObra,
+                    })
+                    .FirstOrDefaultAsync();
+
+            if (trabajo == null)
+            {
+                return NotFound(new ManoObraResponse
+                {
+                    Success = false,
+                    Message = "Trabajo no encontrado"
+                });
+            }
+
+            return Ok(new ManoObraResponse
+            {
+                Success = true,
+                Message = "Información de mano de obra obtenida exitosamente",
+                CostoManoObra = trabajo.CostoManoObra,
+
+            });
+        }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al obtener mano de obra del trabajo {trabajoId}");
+                return StatusCode(500, new ManoObraResponse
+                {
+                    Success = false,
+                    Message = "Error al obtener información de mano de obra"
+                });
+            }
+        }
 
         /// <summary>
         /// Completar trabajo

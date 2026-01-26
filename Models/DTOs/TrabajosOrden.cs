@@ -82,7 +82,18 @@ namespace CarSlineAPI.Models.DTOs
         }
 
     }
-
+    public class FijarManoObraRequest
+    {
+        [Required(ErrorMessage = "El costo de mano de obra es requerido")]
+        [Range(0, double.MaxValue, ErrorMessage = "El costo debe ser mayor o igual a 0")]
+        public decimal CostoManoObra { get; set; }
+    }
+    public class ManoObraResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public decimal CostoManoObra { get; set; }
+    }
     /// <summary>
     /// DTO completo de orden con trabajos
     /// </summary>
@@ -252,4 +263,5 @@ namespace CarSlineAPI.Models.DTOs
         public string EstadoTrabajoNombre { get; set; } = string.Empty;
         public DateTime? FechaHoraAsignacionTecnico { get; set; }
     }
+
 }

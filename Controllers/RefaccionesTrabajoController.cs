@@ -61,12 +61,14 @@ namespace CarSlineAPI.Controllers
                 }
 
                 var refaccionesAgregadas = new List<RefaccionTrabajoDto>();
-
+                decimal totalRefacciones = 0;
 
                 // Procesar cada refacción
                 foreach (var refaccionDto in request.Refacciones)
                 {
- 
+                    var total = refaccionDto.Cantidad * refaccionDto.PrecioUnitario;
+                    totalRefacciones += total;
+
                     var refaccionTrabajo = new Refacciontrabajo
                     {
                         TrabajoId = request.TrabajoId,
@@ -89,10 +91,13 @@ namespace CarSlineAPI.Controllers
                     });
                 }
 
+
                 await _db.SaveChangesAsync();
+
 
                 await _db.Entry(trabajo).ReloadAsync();
 
+                // Actualizar los IDs después de guardar
                 var refaccionesGuardadas = await _db.Set<Refacciontrabajo>()
                     .Where(r => r.TrabajoId == request.TrabajoId)
                     .OrderByDescending(r => r.Id)
